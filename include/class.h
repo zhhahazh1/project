@@ -5,7 +5,8 @@
 // 前向声明
 class Node;
 class Hyperedge;
-
+class HyperGraph;
+class AggNode;
 
 // 节点类
 class Node {
@@ -40,6 +41,7 @@ public:
         hyperedges.push_back(hyperedge);
     }
 private:
+    std::vector<Node*> nodes;
     std::vector<Hyperedge*> hyperedges;
     int area[8]; // 直接定义为 int 数组
 };
@@ -72,4 +74,3 @@ private:
     size_t _NumNode;
     size_t _NumEdge;
 };
-
