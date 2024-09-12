@@ -1,0 +1,1 @@
+2024.9.12 16:55 添加了读取desing.area和desing.net的代码read.h。两个函数分别返回node的集合和edge的集合 
