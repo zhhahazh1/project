@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 // 前向声明
@@ -25,17 +26,19 @@ public:
 
     Node operator+(const Node& other) const {
         Node result; // 使用默认构造函数初始化
+        std::set<Hyperedge*> uniqueedge;
         for (int i = 0; i < 8; ++i) {
             result.area[i] = this->area[i] + other.area[i];
         }
                     // 合并超边集合
         for (auto* hyperedge : this->hyperedges) {
-            result.addHyperedge(hyperedge); // 假设我们有一个方法来添加一个Hyperedge
+            uniqueedge.insert(hyperedge);
         }
         for (auto* hyperedge : other.hyperedges) {
-            if (std::find(result.hyperedges.begin(), result.hyperedges.end(), hyperedge) == result.hyperedges.end()) {
-                result.addHyperedge(hyperedge);
-            }
+            uniqueedge.insert(hyperedge);
+        }
+        for (auto* node : uniqueedge) {
+            result.hyperedges.push_back(node);
         }
     return result;
     }
@@ -43,7 +46,8 @@ public:
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.push_back(hyperedge);
     }
-private:
+    NodeVector getneiNode();
+
     NodeVector nodes;
     HyperedgeVector hyperedges;
     int area[8]; // 直接定义为 int 数组
@@ -68,7 +72,7 @@ public:
     void setWeight(int w) {
         weight = w;
     }
-private:
+
     NodeVector nodes;
     size_t id;
     int weight;
@@ -83,9 +87,29 @@ public:
     {
     }
 
-private:
+
     NodeVector Node_vector;
     HyperedgeVector Edge_vector;
     size_t _NumNode;
     size_t _NumEdge;
+};
+
+NodeVector Node::getneiNode(){
+    NodeVector neiNodes;
+    std::set<Node*> uniqueNeiNodes; // Use a set to avoid duplicates
+
+    for (auto* hyperedge : hyperedges) {
+        for (auto* node : hyperedge->nodes) {
+            if (node != this) {
+                uniqueNeiNodes.insert(node);
+            }
+        }
+    }
+
+    // Convert the set to a vector
+    for (auto* node : uniqueNeiNodes) {
+        neiNodes.push_back(node);
+    }
+
+    return neiNodes;
 };

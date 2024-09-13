@@ -6,7 +6,8 @@ int main() {
     NodeVector nodes = readNodes(desing_aera);
 
     HyperedgeVector Hyperedge =readEdges(desing_net, nodes);
-
+    Node* node=nodes[0];
+    NodeVector nodes2=node->getneiNode();
 
 
     return 0;
