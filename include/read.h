@@ -57,3 +57,5 @@ HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
     }
     return Hyperedges;
 }
+
+FpgaVector readtopo(){}
