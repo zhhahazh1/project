@@ -58,4 +58,22 @@ HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
     return Hyperedges;
 }
 
-FpgaVector readtopo(){}
+// FpgaVector readfpga(const std::string filename){
+// }
+
+// void readtopo(const std::string filename,FpgaVector &fpgas){
+    
+// }
+// void add_link(Fpga* fpga1,Fpga* fpga2){
+//     fpga1->neifpga.push_back(fpga2);
+//     fpga2->neifpga.push_back(fpga1);
+// }
+// void addtopf(FpgaVector &fpgas){
+//     for(auto fpga:fpgas){
+//         int* jvli;
+//         for(auto neifpga:fpga->neifpga)
+//             int id =neifpga->ID;
+//             fpga->jvli[id]=1;
+//             for
+//     }
+// }
