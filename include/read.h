@@ -58,22 +58,30 @@ HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
     return Hyperedges;
 }
 
-// FpgaVector readfpga(const std::string filename){
-// }
+//读取FPGA文件
+FpgaVector readFpgas(const std::string filename){
+    std::ifstream infile(filename);
+    std::string line;
+    FpgaVector fpgas;
+    std::regex fpga_regex("FPGA(\\d+)");
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        std::string fpga_name;
+        int area[8];
+        iss >> fpga_name;
+        std::smatch match;
+        size_t id;
+        std::regex_search(fpga_name, match, fpga_regex);
+        id = std::stoi(match[1].str())-1; // 转换为整数
+        for (int i = 0; i < 8; ++i) {
+            iss >> area[i];
+        }
+        Fpga* fpga = new Fpga(area,id); 
+        fpgas.push_back(fpga);
+    }    
+    return fpgas;
+}
 
-// void readtopo(const std::string filename,FpgaVector &fpgas){
+FpgaVector readtopo(const std::string filename){
     
-// }
-// void add_link(Fpga* fpga1,Fpga* fpga2){
-//     fpga1->neifpga.push_back(fpga2);
-//     fpga2->neifpga.push_back(fpga1);
-// }
-// void addtopf(FpgaVector &fpgas){
-//     for(auto fpga:fpgas){
-//         int* jvli;
-//         for(auto neifpga:fpga->neifpga)
-//             int id =neifpga->ID;
-//             fpga->jvli[id]=1;
-//             for
-//     }
-// }
+}

@@ -110,11 +110,14 @@ public:
 //Fpga类
 class Fpga {
 public:
+    static size_t num_fpga;
+    size_t num_fpga=0;
     Fpga(const int *area,size_t id) {  
         for (int i = 0; i < 8; ++i) {
             this->area[i] = area[i];
         }
         this->ID=id;
+        this->num_fpga = ++Fpga::num_fpga;
     }
     void add_node(Node* node){
         this->nodes.insert(node);
@@ -127,12 +130,11 @@ public:
             this->edges.insert(edge);
     }
     }
-    int ID;
+    int ID[2];
     NodeVector nodes;
     HyperedgeVector edges;
     FpgaVector neifpga;
     int area[8]; 
-    int* jvli;
 };
 
 NodeVector Node::getneiNode(){
