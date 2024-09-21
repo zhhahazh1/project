@@ -10,15 +10,16 @@ class Hyperedge;
 class HyperGraph;
 class Fpga;
 #include <unordered_map>
-using NodeVector = std::set<Node*>;
-using HyperedgeVector = std::set<Hyperedge*>;
-using FpgaVector = std::set<Fpga*>;
+using NodeVector = std::vector<Node*>;
+using NodeSet = std::set<Node*>;
+using HyperedgeSet = std::set<Hyperedge*>;
+using FpgaVector = std::vector<Fpga*>;
 using FpgaMap = std::unordered_map<Fpga*, int>;
-using GainFpgaMap = std::unordered_map<int,NodeVector>;
+using GainFpgaMap = std::unordered_map<int,NodeSet>;
 // 节点类
 class Node {
 public:
-    NodeVector getneiNode();
+    NodeSet getneiNode();
     FpgaVector getneifpga();
     // 带参数构造函数
     Node(const int *area,size_t id) {  
@@ -32,33 +33,32 @@ public:
         std::fill(area, area + 8, 0);
     }
 
-    Node operator+(const Node& other) const {
-        Node result; // 使用默认构造函数初始化
-        std::set<Hyperedge*> uniqueedge;
-        for (int i = 0; i < 8; ++i) {
-            result.area[i] = this->area[i] + other.area[i];
-        }
-                    // 合并超边集合
-        for (auto* hyperedge : this->hyperedges) {
-            uniqueedge.insert(hyperedge);
-        }
-        for (auto* hyperedge : other.hyperedges) {
-            uniqueedge.insert(hyperedge);
-        }
-        for (auto* node : uniqueedge) {
-            result.hyperedges.insert(node);
-        }
-    return result;
-    }
+    // Node operator+(const Node& other) const {
+    //     Node result; // 使用默认构造函数初始化
+    //     std::set<Hyperedge*> uniqueedge;
+    //     for (int i = 0; i < 8; ++i) {
+    //         result.area[i] = this->area[i] + other.area[i];
+    //     }
+    //                 // 合并超边集合
+    //     for (auto* hyperedge : this->hyperedges) {
+    //         uniqueedge.insert(hyperedge);
+    //     }
+    //     for (auto* hyperedge : other.hyperedges) {
+    //         uniqueedge.insert(hyperedge);
+    //     }
+    //     for (auto* node : uniqueedge) {
+    //         result.hyperedges.insert(node);
+    //     }
+    // return result;
+    // }
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
     }
-    int gain=0;
+
     FpgaMap::iterator maxgain;
     FpgaMap gain;
-    NodeVector nodes;
-    HyperedgeVector hyperedges;
+    HyperedgeSet hyperedges;
     Fpga* fpga;
     FpgaMap neifpga;
     int area[8]; 
@@ -69,8 +69,8 @@ public:
 class Hyperedge {
 public:
     FpgaMap getfpgas();
-    NodeVector getSingleOccurrenceFPGANodes();
-    Hyperedge(NodeVector nodes,size_t id,int w)
+    // NodeSet getSingleOccurrenceFPGANodes();
+    Hyperedge(NodeSet nodes,size_t id,int w)
     :nodes(nodes),id(id),weight(w){
         for (auto* node : nodes) {
             node->addHyperedge(this);
@@ -85,8 +85,8 @@ public:
     void setWeight(int w) {
         weight = w;
     }
-
-    NodeVector nodes;
+    Node* src_node;
+    NodeSet nodes;
     size_t id;
     int points;
     FpgaMap fpgaCount;
@@ -95,7 +95,7 @@ public:
 //超图类
 class HyperGraph {
 public:
-    HyperGraph(NodeVector Node_vector, HyperedgeVector Edge_vector)
+    HyperGraph(NodeVector Node_vector, HyperedgeSet Edge_vector)
         : Node_vector(Node_vector), Edge_vector(Edge_vector), 
           _NumNode(Node_vector.size()), _NumEdge(Edge_vector.size()) 
     {
@@ -103,7 +103,7 @@ public:
 
 
     NodeVector Node_vector;
-    HyperedgeVector Edge_vector;
+    HyperedgeSet Edge_vector;
     size_t _NumNode;
     size_t _NumEdge;
 };
@@ -121,44 +121,36 @@ public:
     }
     void add_node(Node* node){
         this->nodes.insert(node);
-        for(auto edge:node->hyperedges){
-            this->add_edge(edge);
-        }
+        // for(auto edge:node->hyperedges){
+        //     this->add_edge(edge);
+        // }
     }
-    void add_edge(Hyperedge* edge){
-        if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
-            this->edges.insert(edge);
-    }
-    }
+    // void add_edge(Hyperedge* edge){
+    //     if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
+    //         this->edges.insert(edge);
+    // }
+    // }
     int ID[2];
-    NodeVector nodes;
-    HyperedgeVector edges;
+    NodeSet nodes;
+    // HyperedgeSet edges;
     FpgaVector neifpga;
     int area[8]; 
 };
-
-NodeVector Node::getneiNode(){
-    NodeVector neiNodes;
-    std::set<Node*> uniqueNeiNodes; // Use a set to avoid duplicates
-
+//返回的邻节点不包含自己
+NodeSet Node::getneiNode(){
+    NodeSet neiNodes;
     for (auto* hyperedge : hyperedges) {
         for (auto* node : hyperedge->nodes) {
             if (node != this) {
-                uniqueNeiNodes.insert(node);
+                neiNodes.insert(node);
             }
         }
     }
-
-    // Convert the set to a vector
-    for (auto* node : uniqueNeiNodes) {
-        neiNodes.insert(node);
-    }
-
     return neiNodes;
-};//返回的邻节点不包含自己
-
+};
+//返回的邻居fpga不包含自己所在的fpga
 FpgaVector Node::getneifpga(){
-    NodeVector neiNodes=this->getneiNode();
+    NodeSet neiNodes=this->getneiNode();
     FpgaVector neifpgas;
     std::set<Fpga*> uniqueNeiFpga;
     for (auto node:neiNodes){
@@ -167,18 +159,18 @@ FpgaVector Node::getneifpga(){
         }
     }
     for (auto node:uniqueNeiFpga){
-        neifpgas.insert(node);
+        neifpgas.push_back(node);
     }
     return neifpgas;
-};//返回的邻居fpga不包含自己所在的fpga
+};
 
-NodeVector Hyperedge::getSingleOccurrenceFPGANodes() {
-    // 然后收集只出现了一次的FPGA节点
-    NodeVector singleOccurrenceNodes;
-    for (auto node : this->nodes) {
-        if (this->fpgaCount[node->fpga] == 1) {
-            singleOccurrenceNodes.insert(node);
-        }
-    }
-    return singleOccurrenceNodes;
-}
+// NodeSet Hyperedge::getSingleOccurrenceFPGANodes() {
+//     // 然后收集只出现了一次的FPGA节点
+//     NodeSet singleOccurrenceNodes;
+//     for (auto node : this->nodes) {
+//         if (this->fpgaCount[node->fpga] == 1) {
+//             singleOccurrenceNodes.insert(node);
+//         }
+//     }
+//     return singleOccurrenceNodes;
+// }

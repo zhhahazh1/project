@@ -26,10 +26,10 @@ NodeVector readNodes(const std::string filename) {
 }
 
 // 读取超边文件
-HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
+HyperedgeSet readEdges(const std::string filename, NodeVector& NodeVector) {
     std::ifstream infile(filename);
     std::string line;
-    HyperedgeVector Hyperedges;
+    HyperedgeSet Hyperedges;
     std::regex node_regex("g(\\d+)");
     size_t id=0;
     while (std::getline(infile, line)) {
@@ -42,6 +42,7 @@ HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
         size_t node_id;
         std::regex_search(srnode_name, match, node_regex);
         node_id = std::stoi(match[1].str())-1; 
+        edge->src_node=NodeVector[node_id];
         edge->addNode(NodeVector[node_id]);
         int weight;
         iss >> weight;
@@ -52,17 +53,17 @@ HyperedgeVector readEdges(const std::string filename, NodeVector& NodeVector) {
             node_id = std::stoi(match[1].str())-1; 
             edge->addNode(NodeVector[node_id]);
         }
-        Hyperedges.push_back(edge);
+        Hyperedges.insert(edge);
         id++;
     }
     return Hyperedges;
 }
 
 //读取FPGA文件
-FpgaVector readFpgas(const std::string filename){
+FpgaSet readFpgas(const std::string filename){
     std::ifstream infile(filename);
     std::string line;
-    FpgaVector fpgas;
+    FpgaSet fpgas;
     std::regex fpga_regex("FPGA(\\d+)");
     while (std::getline(infile, line)) {
         std::istringstream iss(line);
@@ -82,6 +83,6 @@ FpgaVector readFpgas(const std::string filename){
     return fpgas;
 }
 
-FpgaVector readtopo(const std::string filename){
+FpgaSet readtopo(const std::string filename){
     
 }
