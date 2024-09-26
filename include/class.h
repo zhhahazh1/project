@@ -110,31 +110,36 @@ public:
 //Fpga类
 class Fpga {
 public:
-    static size_t num_fpga;
-    size_t num_fpga=0;
     Fpga(const int *area,size_t id) {  
         for (int i = 0; i < 8; ++i) {
             this->area[i] = area[i];
         }
         this->ID=id;
-        this->num_fpga = ++Fpga::num_fpga;
+        //this->distance_neifpga = nullptr;
     }
-    void add_node(Node* node){
+    void initial_Distance(size_t numFpga) {
+        this->numFpgas=numFpga;
+        this->distance_neifpga.resize(numFpgas, 0);
+        //adjList = new std::vector<int>[numFpgas];
+    }
+    /*void add_node(Node* node){
         this->nodes.insert(node);
         // for(auto edge:node->hyperedges){
         //     this->add_edge(edge);
         // }
     }
-    // void add_edge(Hyperedge* edge){
-    //     if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
-    //         this->edges.insert(edge);
-    // }
-    // }
-    int ID[2];
-    NodeSet nodes;
-    // HyperedgeSet edges;
-    FpgaVector neifpga;
+    void add_edge(Hyperedge* edge){
+        if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
+            this->edges.insert(edge);
+    }
+    }*/
+    NodeVector nodes;
+    HyperedgeVector edges;
     int area[8]; 
+    size_t ID;
+    std::vector<int> distance_neifpga;
+    //std::vector<int>* adjList;
+    size_t numFpgas;
 };
 //返回的邻节点不包含自己
 NodeSet Node::getneiNode(){

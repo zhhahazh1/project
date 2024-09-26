@@ -79,10 +79,29 @@ FpgaSet readFpgas(const std::string filename){
         }
         Fpga* fpga = new Fpga(area,id); 
         fpgas.push_back(fpga);
-    }    
+    }
     return fpgas;
 }
 
-FpgaSet readtopo(const std::string filename){
-    
+FpgaVector readtopo(const std::string filename, int fpga_max_dis){
+    std::ifstream infile(filename);
+    std::string line;
+    std::getline(infile, line);
+    fpga_max_dis=std::stoi(line);
+    std::regex fpga_regex("FPGA(\\d+)");
+    FpgaVector fpgas;
+    while (std::getline(infile, line)) {
+        std::istringstream iss(line);
+        std::string fpga_name;
+        std::smatch match;
+        int id[2];
+        for (int i = 0; i < 2; ++i) {
+        iss >> fpga_name;
+        std::regex_search(fpga_name, match, fpga_regex);
+        id[0] = std::stoi(match[1].str())-1; 
+        }
+        fpgas[id[0]]->distance_neifpga[id[1]] = 1;
+        fpgas[id[1]]->distance_neifpga[id[0]] = 1;
+    }
+    return fpgas;
 }

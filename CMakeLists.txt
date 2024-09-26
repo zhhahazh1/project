@@ -11,3 +11,8 @@ add_executable(
     main
     ${SRC_LIST}
 )
+# 添加 test 可执行文件 
+add_executable( 
+    test 
+    ${PROJECT_SOURCE_DIR}/test.cpp 
+)
