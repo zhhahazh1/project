@@ -33,29 +33,30 @@ public:
         std::fill(area, area + 8, 0);
     }
 
-    // Node operator+(const Node& other) const {
-    //     Node result; // 使用默认构造函数初始化
-    //     std::set<Hyperedge*> uniqueedge;
-    //     for (int i = 0; i < 8; ++i) {
-    //         result.area[i] = this->area[i] + other.area[i];
-    //     }
-    //                 // 合并超边集合
-    //     for (auto* hyperedge : this->hyperedges) {
-    //         uniqueedge.insert(hyperedge);
-    //     }
-    //     for (auto* hyperedge : other.hyperedges) {
-    //         uniqueedge.insert(hyperedge);
-    //     }
-    //     for (auto* node : uniqueedge) {
-    //         result.hyperedges.insert(node);
-    //     }
-    // return result;
-    // }
+    Node* operator+(Node& other) {
+        Node* result = new Node; // 使用默认构造函数初始化
+
+        //节点权重相加
+        for (int i = 0; i < 8; ++i) {
+            result->area[i] = this->area[i] + other.area[i];
+        }
+
+        //两个子节点的超边均连向result节点，使用set避免重复
+        std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
+        uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
+        
+        result->hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
+
+        // 当前节点和other节点都要插入到result节点的nodes集合中
+        result->nodes.insert(this);
+        result->nodes.insert(&other);
+        return result;
+    }
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
     }
-
+    NodeSet nodes;
     FpgaMap::iterator maxgain;
     FpgaMap gain;
     HyperedgeSet hyperedges;
