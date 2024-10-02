@@ -89,7 +89,7 @@ public:
     Node* src_node;
     NodeSet nodes;
     size_t id;
-    int points;
+    int points=0;
     FpgaMap fpgaCount;
     int weight;
 };
@@ -123,8 +123,12 @@ public:
         this->distance_neifpga.resize(numFpgas, 0);
         //adjList = new std::vector<int>[numFpgas];
     }
-    /*void add_node(Node* node){
-        this->nodes.insert(node);
+    void add_node(Node* node){
+        this->nodes.push_back(node);
+        //修改已使用面积
+        for (int i = 0; i < 8; ++i) {
+            this->usearea[i] += node->area[i];
+        }
         // for(auto edge:node->hyperedges){
         //     this->add_edge(edge);
         // }
@@ -133,9 +137,10 @@ public:
         if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
             this->edges.insert(edge);
     }
-    }*/
+    }
+    int usearea[8]={0,0,0,0,0,0,0,0};
     NodeVector nodes;
-    HyperedgeVector edges;
+    HyperedgeSet edges;
     int area[8]; 
     size_t ID;
     std::vector<int> distance_neifpga;

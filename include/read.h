@@ -2,6 +2,34 @@
 #include <sstream>
 #include <regex> 
 #include <queue>
+
+void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
+        std::vector<bool> visited(fpgas[0]->numFpgas, false);   // 标记节点是否被访问
+        std::queue<int> queue;                           // 用于BFS的队列
+ 
+        // 将起始节点入队并标记为已访问
+        queue.push(startVertex);
+        visited[startVertex] = true;
+ 
+        while (!queue.empty()) {
+            int currentVertex = queue.front();
+            bool onlyOneElement = queue.size() == 1;//避免queue.size()变化影响判断
+            queue.pop();
+            if (onlyOneElement){
+                for (int i = 0; i < fpgas[0]->numFpgas; ++i) {
+                    if (!visited[i]) {
+                        fpgas[startVertex]->distance_neifpga[i] ++;
+                }
+            }}
+            // 遍历当前节点的相邻节点
+            for (int neighbor : adjList[currentVertex]) {
+                if (!visited[neighbor]) {
+                    queue.push(neighbor);
+                    visited[neighbor] = true;
+                }
+            }
+        }
+    }
 // 读取节点文件
 NodeVector readNodes(const std::string filename) {
     std::ifstream infile(filename);
@@ -61,10 +89,10 @@ HyperedgeSet readEdges(const std::string filename, NodeVector& NodeVector) {
 }
 
 //读取FPGA文件
-FpgaSet readFpgas(const std::string filename){
+FpgaVector readFpgas(const std::string filename){
     std::ifstream infile(filename);
     std::string line;
-    FpgaSet fpgas;
+    FpgaVector fpgas;
     std::regex fpga_regex("FPGA(\\d+)");
     size_t maxId = 0;
     while (std::getline(infile, line)) {
