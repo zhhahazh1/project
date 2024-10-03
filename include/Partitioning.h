@@ -36,6 +36,31 @@
 //         }
 //     }
 // }
+bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
+    HyperedgeSet neiedges = node->hyperedges;
+    //边约束检查
+    for (auto edge:neiedges){
+        if(node==edge->src_node){
+            FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
+            fpgacount[node->fpga]--;
+            for (auto fpga:fpgacount){
+                if (fpga.first!=tarfpga){
+                    int distance=dis_fpgas(tarfpga,fpga.first);
+                    if (distance>checker.maxdistance){
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    //面积约束检查
+    
+    if (tarfpga->uesarea+node->area>tarfpga->area){
+        return false;
+    }
+    return true;
+}
+
 void Point (Node* node){
     HyperedgeSet neiedges = node->hyperedges;
     Fpga* nor_fpga=node->fpga;//移动前位置

@@ -16,6 +16,74 @@ using HyperedgeSet = std::set<Hyperedge*>;
 using FpgaVector = std::vector<Fpga*>;
 using FpgaMap = std::unordered_map<Fpga*, int>;
 using GainFpgaMap = std::unordered_map<int,NodeSet>;
+// 面积类
+class Area {
+    public:
+        int values[8];
+
+        // 构造函数
+        Area() {
+            std::fill(std::begin(values), std::end(values), 0);
+        }
+
+        // 运算符重载：加法
+        Area operator+(const Area& other) const {
+            Area result;
+            for (int i = 0; i < 8; ++i) {
+                result.values[i] = this->values[i] + other.values[i];
+            }
+            return result;
+        }
+        Area& operator+=(const Area& other) {
+            for (int i = 0; i < 8; ++i) {
+                this->values[i] += other.values[i];
+            }
+            return *this;
+        }
+        Area& operator-=(const Area& other) {
+            for (int i = 0; i < 8; ++i) {
+                this->values[i] -= other.values[i];
+            }
+            return *this;
+        }
+        Area operator-(const Area& other) const {
+            Area result;
+            for (int i = 0; i < 8; ++i) {
+                result.values[i] = this->values[i] - other.values[i];
+            }
+            return result;
+        }
+
+        // 运算符重载：大小比较
+        bool operator<(const Area& other) const {
+            for (int i = 0; i < 8; ++i) {
+                if (this->values[i] >= other.values[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool operator>(const Area& other) const {
+            for (int i = 0; i < 8; ++i) {
+                if (this->values[i] <= other.values[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // 输出运算符重载
+        friend std::ostream& operator<<(std::ostream& os, const Area& area) {
+            os << "[";
+            for (int i = 0; i < 8; ++i) {
+                os << area.values[i];
+                if (i < 7) os << ", ";
+            }
+            os << "]";
+            return os;
+        }
+};
 // 节点类
 class Node {
 public:
@@ -36,10 +104,8 @@ public:
     Node* operator+(Node& other) {
         Node* result = new Node; // 使用默认构造函数初始化
 
-        //节点权重相加
-        for (int i = 0; i < 8; ++i) {
-            result->area[i] = this->area[i] + other.area[i];
-        }
+        //节点面积相加
+        result->area = this->area + other.area;
 
         //两个子节点的超边均连向result节点，使用set避免重复
         std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
@@ -62,7 +128,8 @@ public:
     HyperedgeSet hyperedges;
     Fpga* fpga;
     FpgaMap neifpga;
-    int area[8]; 
+    //int area[8]; 
+    Area area;
     size_t ID;
     bool movenable = true;
 };
@@ -82,11 +149,36 @@ public:
         nodes.insert(node);
         node->addHyperedge(this);
     }
+    FpgaMap getFpgaMap(){
+        return fpgaCount;
+    }
+    // int getmaxdistance(){
+    //     Fpga* src_fpga=this->src_node->fpga;
+    //     int max_distance=0;
+    //     for (auto fpga:fpgaCount){
+    //         if (fpga.first!=src_fpga){
+    //             distance=dis_fpgas(src_fpga,fpga.first);
+    //             max_distance=distance>max_distance?distance:max_distance;
+    //         }
+    //     }
+    //     return max_distance;
+    // };
+    NodeSet geterror_nodes(int maxdistance){
+        Fpga* src_fpga=this->src_node->fpga;
+        for (auto node:nodes){
+            int distance=dis_fpgas(src_fpga,node->fpga);
+            if (distance>maxdistance){
+                this->error_nodes.insert(node);
+            }
+        }
+        return this->error_nodes;
+    }
     void setWeight(int w) {
         weight = w;
     }
     Node* src_node;
     NodeSet nodes;
+    NodeSet error_nodes;
     size_t id;
     int points=0;
     FpgaMap fpgaCount;
@@ -125,9 +217,7 @@ public:
     void add_node(Node* node){
         this->nodes.push_back(node);
         //修改已使用面积
-        for (int i = 0; i < 8; ++i) {
-            this->usearea[i] += node->area[i];
-        }
+        this->usearea+=node->area;
         // for(auto edge:node->hyperedges){
         //     this->add_edge(edge);
         // }
@@ -135,16 +225,23 @@ public:
     void add_edge(Hyperedge* edge){
         if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
             this->edges.insert(edge);
+        }
     }
-    }
-    int usearea[8]={0,0,0,0,0,0,0,0};
+
+    //int usearea[8]={0,0,0,0,0,0,0,0};
+    Area usearea;
     NodeVector nodes;
     HyperedgeSet edges;
-    int area[8]; 
+    //int area[8]; 
+    Area area;
     size_t ID;
     std::vector<int> distance_neifpga;
     //std::vector<int>* adjList;
     size_t numFpgas;
+    int maxcoppoints;
+    int nowcoppoints;
+    bool areaconstrain;
+    bool copconstrain;
 };
 //返回的邻节点不包含自己
 NodeSet Node::getneiNode(){

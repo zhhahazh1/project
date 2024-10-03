@@ -1,8 +1,9 @@
 #include <class.h>
 #include <read.h>
 #include<Initial.h>
-#include<Partitioning.h>
 #include<sparsification.h>
+#include<ConCleck.h>
+#include<Partitioning.h>
 int main() {
     std::string desing_aera = "../exapmle/design.are";
     std::string desing_net = "../exapmle/design.net";

@@ -3,6 +3,7 @@
 #include <regex> 
 #include <queue>
 
+/*
 void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
         std::vector<bool> visited(fpgas[0]->numFpgas, false);   // 标记节点是否被访问
         std::queue<int> queue;                           // 用于BFS的队列
@@ -30,6 +31,7 @@ void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
             }
         }
     }
+*/
 // 读取节点文件
 NodeVector readNodes(const std::string filename) {
     std::ifstream infile(filename);
