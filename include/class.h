@@ -69,7 +69,6 @@ public:
 // 超边类
 class Hyperedge {
 public:
-    FpgaMap getfpgas();
     // NodeSet getSingleOccurrenceFPGANodes();
     Hyperedge(NodeSet nodes,size_t id,int w)
     :nodes(nodes),id(id),weight(w){
