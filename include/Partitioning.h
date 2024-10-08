@@ -54,14 +54,26 @@ bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
         }
     }
     //面积约束检查
-    
-    if (tarfpga->uesarea+node->area>tarfpga->area){
+    if (tarfpga->usearea+node->area>tarfpga->area){
         return false;
+    }
+    //检查fpga的cop
+    for (auto edge:neiedges){
+        FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
+        int tarfpga_nowcop=tarfpga->nowcoppoints;
+        //判断fpgacount中是否包含tarfpga
+        if (fpgacount.find(tarfpga) != fpgacount.end()){
+            tarfpga_nowcop+=edge->weight;
+            if (tarfpga_nowcop>tarfpga->maxcoppoints){
+                return false;
+            }
+        }
+        
     }
     return true;
 }
 
-void Point (Node* node){
+void Point (Node* node,ConstraintChecker &checker){
     HyperedgeSet neiedges = node->hyperedges;
     Fpga* nor_fpga=node->fpga;//移动前位置
     FpgaMap gain;//最后得到的东西
@@ -73,30 +85,35 @@ void Point (Node* node){
         //计算移动后的分数
         if (node==edge->src_node){
             for (auto tar_fpga:tarfpgas){
-                fpgas[nor_fpga]--;
-                fpgas[tar_fpga]++;
-                if (fpgas[nor_fpga] == 0) {
-                    fpgas.erase(nor_fpga);
-                }//更新移动后的边占fpga
-                int points1=0;
-                for (auto fpga2:fpgas){
-                    int points1 += 空函数(tar_fpga.first,fpga2.first);   
-                }//计算移动后分数
-                gain[tar_fpga]+=points0-points1;
+                if(checkcon(node,tar_fpga,checker)){  
+                    fpgas[nor_fpga]--;
+                    fpgas[tar_fpga]++;
+                    if (fpgas[nor_fpga] == 0) {
+                        fpgas.erase(nor_fpga);
+                    }//更新移动后的边占fpga
+                    int points1=0;
+                    for (auto fpga2:fpgas){
+                        int points1 += 空函数(tar_fpga.first,fpga2.first);   
+                    }//计算移动后分数
+                    gain[tar_fpga]+=points0-points1;              
+                }
             };
         }//移动节点是源节点情况时，任何情况都要重新计算
         else{
             for (auto tar_fpga:tarfpgas){
-                auto it = fpgas.find(tar_fpga);
-                if(fpgas[nor_fpga]==1){//块和节点边交集大于1
-                     gain[tar_fpga]=空函数(src_fpga,nor_fpga)-空函数(src_fpga,tar_fpga);
+                if(checkcon(node,tar_fpga,checker)){
+                    auto it = fpgas.find(tar_fpga);
+                    if(fpgas[nor_fpga]==1){//块和节点边交集大于1
+                        gain[tar_fpga]=空函数(src_fpga,nor_fpga)-空函数(src_fpga,tar_fpga);
+                    }
+                    else if(it == fpgas.end()){//目标块和当前边无交集
+                        gain[tar_fpga]=空函数(src_fpga,tar_fpga);
+                    }
+                    else{
+                        gain[tar_fpga]=0;
+                    }
                 }
-                else if(it == fpgas.end()){//目标块和当前边无交集
-                    gain[tar_fpga]=空函数(src_fpga,tar_fpga);
-                }
-                else{
-                    gain[tar_fpga]=0;
-                }
+                
             }
         }
     }
@@ -204,13 +221,13 @@ void addpoints (HyperGraph &HyperGraph){
     }
 }
 
-void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,int max){
+void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &checker){
     addpoints (HyperGraph);
     NodeVector Nodes =HyperGraph.Node_vector;
     int maxgain=0;
     GainFpgaMap gainFpgamap;
     for (auto node:Nodes){
-        Point(node);
+        Point(node,checker);
         int gain=node->maxgain->second;
         gainFpgamap[gain].insert(node);
         maxgain=gain>maxgain?gain:maxgain;

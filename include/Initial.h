@@ -44,7 +44,7 @@ Fpga* getFarthestFpga(const FpgaVector& Fpgas) {
         // 计算每个FPGA的综合距离
         int sumA = std::accumulate(a->distance_neifpga.begin(), a->distance_neifpga.end(), 0);
         int sumB = std::accumulate(b->distance_neifpga.begin(), b->distance_neifpga.end(), 0);
-        return sumA > sumB; // 返回综合距离较大的FPGA
+        return sumA < sumB; 
     });
 
     return (farthestFpga != Fpgas.end()) ? *farthestFpga : nullptr;
@@ -89,7 +89,7 @@ void growNodes(std::vector<Fpga*>& Fpgas) {
             queues[i].push(node);
         }
     }
-
+    int a=0;
     // 循环直至所有队列都为空
     bool allQueuesEmpty = false;
     while (!allQueuesEmpty) {
@@ -100,30 +100,21 @@ void growNodes(std::vector<Fpga*>& Fpgas) {
 
                 Node* current = queues[i].front();
                 queues[i].pop();
-
                 for (Node* neighbor : current->getneiNode()) {
-                    if (neighbor->fpga == nullptr) { // 如果相邻节点未分配
-                        bool canAllocate = true;
-                        for (int j = 0; j < 8; ++j) {
-                            if (Fpgas[i]->usearea[j] + neighbor->area[j] > Fpgas[i]->area[j]) {
-                                canAllocate = false;
-                                break;
-                            }
-                        }
-                        if (canAllocate) {
-                            neighbor->fpga = Fpgas[i];
-                            Fpgas[i]->add_node(neighbor);
-                            for (int j = 0; j < 8; ++j) {
-                                Fpgas[i]->usearea[j] += neighbor->area[j]; // 更新使用面积
-                            }
-                            queues[i].push(neighbor);
-                            break; // 每次只添加一个节点
-                        }
+                    queues[i].push(neighbor);
+                }
+                while (true){
+                    auto currentnode = queues[i].front();
+                    if ((currentnode->fpga == nullptr)&&(Fpgas[i]->usearea + currentnode->area < Fpgas[i]->area)){
+                            Fpgas[i]->add_node(currentnode);
+                            break;
                     }
+                    queues[i].pop();
                 }
             }
+
         }
-    }
+    } 
 }
 
 
@@ -156,25 +147,26 @@ void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas) {
 
     // 选择度数最小的节点作为出发节点
     auto startNode = std::min_element(nodes.begin(), nodes.end(), [](Node* a, Node* b) {
-        return a->nodes.size() < b->nodes.size();
+        return a->getneiNode().size() < b->getneiNode().size();
     });
 
     // BFS遍历
     std::queue<Node*> q;
-    std::unordered_map<Node*, int> distance;
+    std::unordered_map<Node*, int> distance;//节点到起始节点的距离
     std::unordered_map<int, std::queue<Node*>> re_distance;
     q.push(*startNode);
     distance[*startNode] = 0;
+    re_distance[0].push(*startNode);
 
     //BFS遍历得到每个节点到起始节点的距离
-    int visitedNodes = 0;//初始化计数
+    int visitedNodes = 1;//初始化计数
     int maxdis=0;
     while (visitedNodes < totalNodes) {
         Node* current = q.front();
         q.pop();
         for (Node* neighbor : current->getneiNode()) { // 使用 getneinode() 获取相邻节点
             if (distance.find(neighbor) == distance.end()) {
-                int maxdis = distance[current] + 1;
+                maxdis = distance[current] + 1;
                 distance[neighbor] = maxdis;
                 re_distance[maxdis].push(neighbor); // 将节点添加到对应距离的列表中
                 q.push(neighbor);
@@ -185,14 +177,15 @@ void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas) {
             }
         }
     }
+    //std::cout << "Distance map contains " << distance.size() << " elements." << std::endl;
     auto farthestFpga = getFarthestFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
     std::vector<int> fpgadis=farthestFpga->distance_neifpga;
     scaleIntegersToMax(fpgadis, maxdis);//将fpga的距离缩放到最大值
     int id = 0;
     for(int dis: fpgadis){
         int distanceToUse = findClosestDistance(re_distance, dis);
-        Fpgas[id]->add_node(re_distance[distanceToUse].front());
-        re_distance[distanceToUse].front()->fpga = Fpgas[id];
+        Fpgas[id]->add_node(re_distance[distanceToUse].front());//将距离最近的节点分配给fpga
+        re_distance[distanceToUse].front()->fpga = Fpgas[id];//更新节点的fpga
         re_distance[distanceToUse].pop();
         id++;
     }

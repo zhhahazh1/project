@@ -3,6 +3,39 @@
 #include <regex> 
 #include <queue>
 
+void BFS(int startVertex,std::vector<int>* adjList,FpgaVector &fpgas) {
+    std::vector<bool> visited(fpgas[0]->numFpgas, false);   // 标记节点是否被访问
+    std::queue<int> queue;                           // 用于BFS的队列
+    std::queue<int> tem_queue;
+
+    // 将起始节点入队并标记为已访问
+    queue.push(startVertex);
+    visited[startVertex] = true;
+
+    while (!queue.empty()) {
+        int currentVertex = queue.front();
+        //bool onlyOneElement = queue.size() == 1;//避免queue.size()变化影响判断
+        queue.pop();
+        for (int neighbor : adjList[currentVertex]) {
+            if (!visited[neighbor]) {
+                tem_queue.push(neighbor);
+            }
+        }
+        if (queue.empty()) {
+            for (int i = 0; i < fpgas[0]->numFpgas; ++i) {
+                if (!visited[i]) {
+                    fpgas[startVertex]->distance_neifpga[i] ++;
+                }
+            }
+            while (!tem_queue.empty()) {
+                int nextVertex = tem_queue.front();
+                tem_queue.pop();
+                queue.push(nextVertex);
+                visited[nextVertex] = true;
+            }
+        }   
+    }  
+}
 /*
 void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
         std::vector<bool> visited(fpgas[0]->numFpgas, false);   // 标记节点是否被访问
@@ -107,10 +140,13 @@ FpgaVector readFpgas(const std::string filename){
         std::regex_search(fpga_name, match, fpga_regex);
         id = std::stoi(match[1].str())-1; // 转换为整数
         maxId = std::max(maxId, id + 1);
+        int maxcoppoints;
+        iss >> maxcoppoints;
         for (int i = 0; i < 8; ++i) {
             iss >> area[i];
         }
         Fpga* fpga = new Fpga(area,id); 
+        fpga->maxcoppoints=maxcoppoints;
         fpgas.push_back(fpga);
     }
     for (auto fpga : fpgas) {
@@ -119,11 +155,11 @@ FpgaVector readFpgas(const std::string filename){
     return fpgas;
 }
 
-void readtopo(const std::string filename, int hop_max,FpgaVector fpgas){
+void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector &fpgas){
     std::ifstream infile(filename);
     std::string line;
     std::getline(infile, line);
-    hop_max=std::stoi(line);
+    checker.maxdistance=std::stoi(line);
     std::regex fpga_regex("FPGA(\\d+)");
     std::vector<int>* adjList;
     adjList = new std::vector<int>[fpgas[0]->numFpgas];//创建邻接表
@@ -146,36 +182,6 @@ void readtopo(const std::string filename, int hop_max,FpgaVector fpgas){
     for (int i = 0; i < fpgas[0]->numFpgas; ++i){
         BFS(i,adjList,fpgas);
     }
+    delete[] adjList;
 }
 
-void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
-        std::vector<bool> visited(fpgas[0]->numFpgas, false);   // 标记节点是否被访问
-        std::queue<int> queue;                           // 用于BFS的队列
-        std::queue<int> tem_queue;
- 
-        // 将起始节点入队并标记为已访问
-        queue.push(startVertex);
-        visited[startVertex] = true;
- 
-        while (!queue.empty()) {
-            int currentVertex = queue.front();
-            //bool onlyOneElement = queue.size() == 1;//避免queue.size()变化影响判断
-            queue.pop();
-            for (int neighbor : adjList[currentVertex]) {
-                if (!visited[neighbor]) {
-                    tem_queue.push(neighbor);
-                }
-            }
-            if (queue.empty()) {
-                for (int i = 0; i < fpgas[0]->numFpgas; ++i) {
-                    if (!visited[i]) {
-                        fpgas[startVertex]->distance_neifpga[i] ++;
-                }
-            }
-               while (!tem_queue.empty()) {
-                int nextVertex = tem_queue.front();
-                tem_queue.pop();
-                queue.push(nextVertex);
-                visited[nextVertex] = true;
-        }
-    }}}

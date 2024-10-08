@@ -1,6 +1,3 @@
-
-
-
 class ConstraintChecker {
 public:
     void check(FpgaVector &fpgas, HyperGraph &hypergraph) {
