@@ -20,7 +20,14 @@ int main() {
     int hop_max;
     ConstraintChecker checker;
     readtopo(desing_topo,checker,fpgas);
-    InitialPartitioning(HyperGraph,fpgas);
+    InitialPartitioning(HyperGraph,fpgas,checker);
+    int hasinitial=0;
+    for (int i = 0; i < fpgas.size(); ++i) {
+        hasinitial+=fpgas[i]->nodes.size();
+        std::cout << "fpga" << i << ": " << fpgas[i]->nodes.size() << std::endl;
+    }
+        std::cout << "hasinitial:" << hasinitial << std::endl;
+    checker.check(fpgas,HyperGraph);
     // Partitioning(HyperGraph,fpgas,5);
     return 0;
 }

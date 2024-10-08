@@ -1,43 +1,29 @@
 #include <cmath>
 #include <numeric>
-// void InitialPartitioning(HyperGraph &HyperGraph,FpgaSet &Fpgas){
-//     int totalNodes = HyperGraph._NumNode;
-//     int numFpgas = Fpgas.size();
-//     int minSize = totalNodes / numFpgas;
-//     int extraElements = totalNodes % numFpgas;
-//     int sqrtNumFpgas = std::sqrt(numFpgas);
-//     NodeSet& nodes=HyperGraph.Node_vector;
-//     int start = 0;
-//     int ID[2]={0,0};
-//     for (int i = 0; i < numFpgas-1; ++i) {
-//         int end = start + minSize;
-//         ID[0]= i / sqrtNumFpgas;
-//         ID[1]= i % sqrtNumFpgas;
-//         Fpga* fpga=new Fpga(ID);
-//         for (auto it = nodes.begin() + start; it != nodes.begin() + end; ++it) {
-//             fpga->add_node(*it);
-//             (*it)->fpga = fpga;
-//             for(auto edge:(*it)->hyperedges){
-//                 edge->fpgaCount[fpga]+=1;
-//             }
-//         }
-//         (Fpgas)[i] = fpga;
-//         start = end;
-//     }
-//     int end = start + minSize+extraElements;
-//     ID[0] = sqrtNumFpgas - 1; 
-//     ID[1] = sqrtNumFpgas - 1; 
-//     Fpga* fpga=new Fpga(ID);
-//     for (auto it = nodes.begin() + start; it != nodes.begin() + end; ++it) {
-//         fpga->add_node(*it);
-//         (*it)->fpga = fpga;
-//         for(auto edge:(*it)->hyperedges){
-//             edge->fpgaCount[fpga]+=1;
-//         }
-//     }
-//     (Fpgas)[numFpgas-1] = fpga;
-// }
 
+bool checkadd(Node* node,Fpga* fpga,ConstraintChecker &checker){
+    if ((node->fpga == nullptr)&&(fpga->usearea + node->area <= fpga->area)){
+        for (auto& edge : node->hyperedges) {
+            if(edge->src_node->fpga!=nullptr){
+                if (dis_fpgas(edge->src_node->fpga,fpga)>checker.maxdistance){
+                    return false;
+                }
+            }
+            else{
+                for (auto& node : edge->nodes) {
+                    if (node->fpga!=nullptr){
+                        if (dis_fpgas(node->fpga,fpga)>checker.maxdistance){
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    return false;
+
+}
 Fpga* getFarthestFpga(const FpgaVector& Fpgas) {
     // 使用 std::max_element 查找综合距离最大的FPGA
     auto farthestFpga = std::max_element(Fpgas.begin(), Fpgas.end(), [](const Fpga* a, const Fpga* b) {
@@ -80,13 +66,16 @@ int findClosestDistance(std::unordered_map<int, std::queue<Node*>>& re_distance,
     return -1; // 理论上不会到达这里
 }
 // 按照BFS将未分配的节点分配给最近的已分配的FPGA
-void growNodes(std::vector<Fpga*>& Fpgas) {
+void growNodes(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker) {
     std::vector<std::queue<Node*>> queues(Fpgas.size());
 
     // 将每个 FPGA 的已分配节点加入各自的队列
     for (size_t i = 0; i < Fpgas.size(); ++i) {
         for (auto& node : Fpgas[i]->nodes) {
             queues[i].push(node);
+            for (Node* neighbor : node->getneiNode()) {
+                queues[i].push(neighbor);
+            }
         }
     }
     int a=0;
@@ -98,18 +87,21 @@ void growNodes(std::vector<Fpga*>& Fpgas) {
             if (!queues[i].empty()) {
                 allQueuesEmpty = false;
 
-                Node* current = queues[i].front();
-                queues[i].pop();
-                for (Node* neighbor : current->getneiNode()) {
-                    queues[i].push(neighbor);
-                }
+                
                 while (true){
-                    auto currentnode = queues[i].front();
-                    if ((currentnode->fpga == nullptr)&&(Fpgas[i]->usearea + currentnode->area < Fpgas[i]->area)){
-                            Fpgas[i]->add_node(currentnode);
+                    Node* current = queues[i].front();
+                    queues[i].pop();
+                    if (checkadd(current,Fpgas[i],checker)){
+                            for (Node* neighbor : current->getneiNode()) {
+                                queues[i].push(neighbor);
+                            }
+                            Fpgas[i]->add_node(current);
+                            current->inifpgae(Fpgas[i]);
                             break;
                     }
-                    queues[i].pop();
+                    if(queues[i].empty()){
+                        break;
+                    }
                 }
             }
 
@@ -137,7 +129,7 @@ void growNodes(std::vector<Fpga*>& Fpgas) {
  * 6. Scale the distances of the FPGAs to the maximum distance found in the BFS.
  * 7. Assign nodes to FPGAs based on the closest distance match.
  */
-void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas) {
+void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker) {
     int totalNodes = HyperGraph._NumNode;
     int numFpgas = Fpgas.size();
     int minSize = totalNodes / numFpgas;
@@ -185,9 +177,10 @@ void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas) {
     for(int dis: fpgadis){
         int distanceToUse = findClosestDistance(re_distance, dis);
         Fpgas[id]->add_node(re_distance[distanceToUse].front());//将距离最近的节点分配给fpga
-        re_distance[distanceToUse].front()->fpga = Fpgas[id];//更新节点的fpga
+        re_distance[distanceToUse].front()->inifpgae(Fpgas[id]);//更新节点的fpga
+        // re_distance[distanceToUse].front()->fpga = Fpgas[id];//更新节点的fpga
         re_distance[distanceToUse].pop();
         id++;
     }
-    growNodes(Fpgas);
+    growNodes(Fpgas,checker);
 }

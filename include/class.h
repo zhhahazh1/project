@@ -64,13 +64,13 @@ class Area {
         }
 
         // 运算符重载：大小比较
-        bool operator<(const Area& other) const {
+        bool operator<=(const Area& other) const {
             for (int i = 0; i < 8; ++i) {
-                if (this->values[i] >= other.values[i]) {
-                    return false;
+                if (this->values[i] <= other.values[i]) {
+                    return true;
                 }
             }
-            return true;
+            return false;
         }
 
         bool operator>(const Area& other) const {
@@ -127,11 +127,12 @@ public:
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
     }
+    void inifpgae(Fpga* fpga);
     NodeSet Inclusion_node;
     FpgaMap::iterator maxgain;
     FpgaMap gain;
     HyperedgeSet hyperedges;
-    Fpga* fpga;
+    Fpga* fpga=nullptr;
     FpgaMap neifpga;
     //int area[8]; 
     Area area;
@@ -171,20 +172,20 @@ public:
     //返回超边中距离源节点超过maxdistance的节点
     NodeSet geterror_nodes(int maxdistance){
         Fpga* src_fpga=this->src_node->fpga;
+        NodeSet error_nodes;
         for (auto node:nodes){
             int distance=dis_fpgas(src_fpga, node->fpga);
             if (distance>maxdistance){
-                this->error_nodes.insert(node);
+                error_nodes.insert(node);
             }
         }
-        return this->error_nodes;
+        return error_nodes;
     }
     void setWeight(int w) {
         weight = w;
     }
     Node* src_node;
     NodeSet nodes;
-    NodeSet error_nodes;
     size_t id;
     int points=0;
     FpgaMap fpgaCount;
@@ -277,6 +278,12 @@ FpgaVector Node::getneifpga(){
     }
     return neifpgas;
 };
+void Node::inifpgae(Fpga* fpga){
+        this->fpga=fpga;
+        for(auto edge:hyperedges){
+            edge->fpgaCount[fpga]+=1;
+        }
+    }
 int dis_fpgas(Fpga* fpga1,Fpga* fpga2){
         return fpga1->distance_neifpga[fpga2->ID];
 }

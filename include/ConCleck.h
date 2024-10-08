@@ -10,10 +10,11 @@ public:
                     fpga->nowcoppoints+=edge->weight;
                 }
             }
+            NodeSet errornodes = edge->geterror_nodes(this->maxdistance);
             for (auto node : edge->geterror_nodes(this->maxdistance)) {
                 error_nodes.insert(node);
+                erroredges.insert(edge);
             }  
-            erroredges.insert(edge);
         }
         for (auto fpga : fpgas) {
             if (fpga->nowcoppoints > fpga->maxcoppoints) {
