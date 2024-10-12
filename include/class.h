@@ -62,15 +62,22 @@ class Area {
             }
             return result;
         }
+        Area operator*(double scale) const {
+            Area result;
+            for (int i = 0; i < 8; ++i) {
+                result.values[i] = this->values[i] * scale;
+            }
+            return result;
+        }
 
         // 运算符重载：大小比较
         bool operator<=(const Area& other) const {
             for (int i = 0; i < 8; ++i) {
-                if (this->values[i] <= other.values[i]) {
-                    return true;
+                if (this->values[i] > other.values[i]) {
+                    return false;
                 }
             }
-            return false;
+            return true;
         }
 
         bool operator>(const Area& other) const {
@@ -96,8 +103,7 @@ class Area {
 // 节点类
 class Node {
 public:
-    NodeSet getneiNode();
-    FpgaVector getneifpga();
+    
     // 带参数构造函数
     Node(const int *area,size_t id) {  
         this->area = Area(area);
@@ -127,13 +133,15 @@ public:
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
     }
+    NodeSet getneiNode();
+    FpgaVector getneifpga();
     void inifpgae(Fpga* fpga);
     NodeSet Inclusion_node;
-    FpgaMap::iterator maxgain;
+    std::pair<Fpga*, int> maxgain = {nullptr, 0};
     FpgaMap gain;
     HyperedgeSet hyperedges;
     Fpga* fpga=nullptr;
-    FpgaMap neifpga;
+    //FpgaMap neifpga;
     //int area[8]; 
     Area area;
     size_t ID;
@@ -222,23 +230,67 @@ public:
         //adjList = new std::vector<int>[numFpgas];
     }
     void add_node(Node* node){
-        this->nodes.push_back(node);
+        if(node->fpga!=nullptr){
+            throw std::invalid_argument("node'fpga is not nullptr");
+        }
+        this->nodes.insert(node);
         //修改已使用面积
         this->usearea+=node->area;
-        // for(auto edge:node->hyperedges){
-        //     this->add_edge(edge);
-        // }
-    }
-    void add_edge(Hyperedge* edge){
-        if (std::find(this->edges.begin(), this->edges.end(), edge) == this->edges.end()) {
-            this->edges.insert(edge);
+        node->inifpgae(this);
+        for(auto edge:node->hyperedges){
+            edge->fpgaCount[this]+=1;
+            if(edge->fpgaCount.size()>1&&edge->fpgaCount[this]==1){
+                this->nowcoppoints+=edge->weight;
+            }
+            //此后这条边被切割了，把原本的fpga的coppoints加上
+            if(edge->fpgaCount.size()==2&&edge->fpgaCount[this]==1){
+                for(auto fpga:edge->fpgaCount){
+                    if(fpga.first!=this){
+                        fpga.first->nowcoppoints+=edge->weight;
+                    }
+                }
+            }
         }
     }
-    
+    void erase_node(Node* node){
+        this->nodes.erase(node);
+        //修改已使用面积
+        this->usearea-=node->area;
+        node->fpga=nullptr;
+        for(auto edge:node->hyperedges){
+            if(edge->fpgaCount.size()==1){
+                nowcoppoints+=edge->weight;
+            }
+            edge->fpgaCount[this]-=1;
+            if(edge->fpgaCount.size()>1&&edge->fpgaCount[this]==0){
+                this->nowcoppoints-=edge->weight;
+                edge->fpgaCount.erase(this);
+            }
+        }
+    }
 
-    //int usearea[8]={0,0,0,0,0,0,0,0};
+    
+//打印子节点id
+    void print(){
+        std::cout << "FPGA" << ID << " "<<this->nodes.size()<<" ";
+        std::cout << nowcoppoints << " ";
+        int count = 0;
+        int max_nodes_to_print = 20;
+        for (auto* node : this->nodes) {
+            if (count >= max_nodes_to_print) {
+                std::cout << "...";
+                break;
+            }
+            std::cout << node->ID << ",";
+            ++count;
+        }
+        std::cout << std::endl;
+    }
+    void print_nowcoppoints(){
+        std::cout << "FPGA" << ID << " area: " << this->area << std::endl;
+    }
     Area usearea;
-    NodeVector nodes;
+    NodeSet nodes;
     HyperedgeSet edges;
     //int area[8]; 
     Area area;
@@ -247,7 +299,7 @@ public:
     //std::vector<int>* adjList;
     size_t numFpgas;
     int maxcoppoints;
-    int nowcoppoints;
+    int nowcoppoints=0;
     bool areaconstrain;
     bool copconstrain;
 };
@@ -280,10 +332,8 @@ FpgaVector Node::getneifpga(){
 };
 void Node::inifpgae(Fpga* fpga){
         this->fpga=fpga;
-        for(auto edge:hyperedges){
-            edge->fpgaCount[fpga]+=1;
-        }
-    }
+}
+
 int dis_fpgas(Fpga* fpga1,Fpga* fpga2){
         return fpga1->distance_neifpga[fpga2->ID];
 }
