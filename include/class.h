@@ -21,6 +21,8 @@ using FpgaSet = std::set<Fpga*>;
 using FpgaMap = std::unordered_map<Fpga*, int>;
 using NodeMove = std::pair<Node*, Fpga*>;
 using GainFpgaMap = std::map<int, std::set<NodeMove>>;
+//using HyperedgeIterator = HyperedgeSet::const_iterator;
+using HyperedgeIterator = typename std::vector<size_t>::const_iterator;
 
 class Node;
 class Hyperedge;
@@ -141,6 +143,18 @@ public:
     NodeSet getneiNode();
     FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
+    
+    // 获取节点的所有关联超边的迭代器范围
+    //std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
+        //return std::make_pair(hyperedges.begin(), hyperedges.end());}
+    std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
+        std::vector<size_t> edgeIds;
+        for (auto it = hyperedges.begin(); it != hyperedges.end(); ++it) {
+            edgeIds.push_back((*it)->id);
+        }
+        return std::make_pair(edgeIds.begin(), edgeIds.end());
+    }
+    
     NodeSet Inclusion_node;
     FpgaMap gain;
     std::unordered_map<Fpga*, std::unordered_map<Hyperedge*,int>> gain_edge;

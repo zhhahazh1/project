@@ -76,8 +76,8 @@ class MurmurHash {
 
 using HashFunc = MurmurHash<uint32_t>;
 using HashValue = typename HashFunc::HashValue;
-Hypergraph buildSparsifiedHypergraph(const Hypergraph& hypergraph) {//生成稀疏化后的图
-    n;
+HyperGraph buildSparsifiedHypergraph(const HyperGraph& hypergraph) {//生成稀疏化后的图
+    int n;
 //生成sparsifier，计算哈希值（复合哈希值），哈希值全部相同的点放入同一个buckets 
 //合并顶点，去除多余边
 //cluster数在某个范围后，停止聚类
@@ -85,9 +85,10 @@ Hypergraph buildSparsifiedHypergraph(const Hypergraph& hypergraph) {//生成稀�
 
 
 
-void hash_calculate(const Hypergraph& hypergraph){
+void hash_calculate(const HyperGraph& hypergraph){
     HashFunc hash;
     HashFuncVector<HashFunc> _hash_func_vector;//创建数组存放每个id对应的hash值，seed用什么标识区分？
+    //传递hash数，num——vector数
 }
 
 void minihash(){

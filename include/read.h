@@ -155,7 +155,7 @@ FpgaVector readFpgas(const std::string filename){
     return fpgas;
 }
 
-void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector &fpgas){
+/*void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector &fpgas){
     std::ifstream infile(filename);
     std::string line;
     std::getline(infile, line);
@@ -183,5 +183,5 @@ void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector 
         BFS(i,adjList,fpgas);
     }
     delete[] adjList;
-}
+}*/
 
