@@ -3,20 +3,25 @@
 #include <set>
 #include <algorithm>
 #include <utility>
-
+#include <unordered_map>
+#include <unordered_set>
+#include <map>
 
 // 前向声明
 class Node;
 class Hyperedge;
 class HyperGraph;
 class Fpga;
-#include <unordered_map>
+
 using NodeVector = std::vector<Node*>;
 using NodeSet = std::set<Node*>;
 using HyperedgeSet = std::set<Hyperedge*>;
 using FpgaVector = std::vector<Fpga*>;
+using FpgaSet = std::set<Fpga*>;
 using FpgaMap = std::unordered_map<Fpga*, int>;
-using GainFpgaMap = std::unordered_map<int,NodeSet>;
+using NodeMove = std::pair<Node*, Fpga*>;
+using GainFpgaMap = std::map<int, std::set<NodeMove>>;
+
 class Node;
 class Hyperedge;
 class HyperGraph;
@@ -134,15 +139,13 @@ public:
         hyperedges.insert(hyperedge);
     }
     NodeSet getneiNode();
-    FpgaVector getneifpga();
+    FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
     NodeSet Inclusion_node;
-    std::pair<Fpga*, int> maxgain = {nullptr, 0};
     FpgaMap gain;
+    std::unordered_map<Fpga*, std::unordered_map<Hyperedge*,int>> gain_edge;
     HyperedgeSet hyperedges;
-    Fpga* fpga=nullptr;
-    //FpgaMap neifpga;
-    //int area[8]; 
+    Fpga* fpga=nullptr; 
     Area area;
     size_t ID;
     bool movenable = true;
@@ -315,18 +318,16 @@ NodeSet Node::getneiNode(){
     }
     return neiNodes;
 };
-//返回的邻居fpga不包含自己所在的fpga
-FpgaVector Node::getneifpga(){
-    NodeSet neiNodes=this->getneiNode();
-    FpgaVector neifpgas;
-    std::set<Fpga*> uniqueNeiFpga;
-    for (auto node:neiNodes){
-        if (node->fpga != this->fpga) {
-            uniqueNeiFpga.insert(node->fpga);
+//返回的邻居fpga,不包含自己所在的fpga
+FpgaSet Node::getneifpga(){
+    FpgaSet neifpgas;
+    for (auto hyperedge : hyperedges) {
+        FpgaMap fpgas=hyperedge->fpgaCount;
+        for (auto fpga:fpgas){
+            if (fpga.first != this->fpga) {
+                neifpgas.insert(fpga.first);
+            }
         }
-    }
-    for (auto node:uniqueNeiFpga){
-        neifpgas.push_back(node);
     }
     return neifpgas;
 };

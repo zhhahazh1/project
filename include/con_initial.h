@@ -5,7 +5,7 @@ using namespace Initial6;
             if(node->fpga == nullptr){
                 
                 for(auto fpga:node->getneifpga()){
-                    if(checkadd(node,fpga,checker)){ 
+                    if(checker.checkadd(node,fpga,checker)){ 
                         fpga->add_node(node);
                     }
                 }
