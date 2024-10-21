@@ -4,7 +4,12 @@
 
 
 namespace Initial6{
-    
+    struct PartitionResult {
+        HyperGraph* hypergraph;
+        FpgaVector* fpgas;
+        int points;
+        bool success;
+    };
     Fpga* getcenterFpga(const FpgaVector& Fpgas) {
         // 使用 std::max_element 查找综合距离最小的FPGA
         auto farthestFpga = std::min_element(Fpgas.begin(), Fpgas.end(), [](const Fpga* a, const Fpga* b) {
@@ -47,7 +52,7 @@ namespace Initial6{
         return -1; // 理论上不会到达这里
     }
     // 按照BFS将未分配的节点分配给最近的已分配的FPGA
-    void growNodes(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker) {
+    void growNodes(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker,std::mt19937 &engine) {
         std::vector<std::queue<Node*>> queues(Fpgas.size());
 
         // 将每个 FPGA 的已分配节点加入各自的队列
@@ -65,10 +70,8 @@ namespace Initial6{
         while (!allQueuesEmpty) {
             allQueuesEmpty = true;
 
-            std::random_device rd; // 用于获取随机种子
-            std::mt19937 g(rd()); // 初始化随机数生成器
 
-            std::shuffle(queues.begin(), queues.end(), g);
+            std::shuffle(queues.begin(), queues.end(), engine);
 
 
             for (size_t i = 0; i < Fpgas.size(); ++i) {
@@ -96,7 +99,20 @@ namespace Initial6{
         } 
     }
 
+    void con_initial(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker){
+        NodeVector &nodes=HyperGraph.Node_vector;
+        for(Node* node : nodes){
+            if(node->fpga == nullptr){
+                
+                for(auto fpga:node->getneifpga()){
+                    if(checker.checkadd(node,fpga,checker)){ 
+                        fpga->add_node(node);
+                    }
+                }
 
+            }
+        }
+    }
     /**
      * @brief Performs initial partitioning of nodes in a hypergraph across multiple FPGAs.
      * 
@@ -116,7 +132,7 @@ namespace Initial6{
      * 6. Scale the distances of the FPGAs to the maximum distance found in the BFS.
      * 7. Assign nodes to FPGAs based on the closest distance match.
      */
-    void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker) {
+    void InitialPartitioning(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker,unsigned int seed) {
         int totalNodes = HyperGraph._NumNode;
         int numFpgas = Fpgas.size();
         int minSize = totalNodes / numFpgas;
@@ -164,14 +180,83 @@ namespace Initial6{
         std::vector<int> fpgadis=farthestFpga->distance_neifpga;
         scaleIntegersToMax(fpgadis, maxdis);//将fpga的距离缩放到最大值
         int id = 0;
+        std::mt19937 engine(seed);
         for(int dis: fpgadis){
             int distanceToUse = Initial6::findClosestDistance(re_distance, dis);
-            srand(static_cast<unsigned>(time(0)));
-            int randomNumber = rand() % re_distance[distanceToUse].size();
+            
+            std::uniform_int_distribution<int> dist(0, re_distance[distanceToUse].size() - 1);
+            int randomNumber = dist(engine);
             Fpgas[id]->add_node(re_distance[distanceToUse][randomNumber]);//将距离最近的节点分配给fpga
             re_distance[distanceToUse].erase(re_distance[distanceToUse].begin() + randomNumber);
             id++;
         }
-        Initial6::growNodes(Fpgas,checker);
+        Initial6::growNodes(Fpgas,checker,engine);
+        con_initial(HyperGraph,Fpgas,checker);
+        int a=0;
+    }
+
+    std::vector<HyperGraph*> copygraphs(HyperGraph &Graph, int num) {
+        std::vector<HyperGraph*> hypergraphs;
+        for (int i = 0; i < num; ++i) {
+            hypergraphs.push_back(new HyperGraph(Graph));
+        }
+        return hypergraphs;
+    }
+
+    std::vector<FpgaVector*> copyFpga(FpgaVector &fpgas, int num) {
+        std::vector<FpgaVector*> fpgasvector;
+        for (int i = 0; i < num; ++i) {
+            FpgaVector* fpgasCopy = new FpgaVector();
+            for (auto fpga : fpgas) {
+                fpgasCopy->push_back(new Fpga(*fpga));
+            }
+            fpgasvector.push_back(fpgasCopy);
+        }
+        return fpgasvector;
+    }
+    PartitionResult run_initial_partitioning(HyperGraph* hypergraph, FpgaVector* fpgas, ConstraintChecker checker, unsigned int seed) {
+        std::lock_guard<std::mutex> lock(seed_mutex);
+        Initial6::InitialPartitioning(*hypergraph, *fpgas, checker, seed);
+        int points = checker.check(*fpgas, *hypergraph);
+        int hasinitial=0;
+        for(auto fpga: *fpgas){
+            fpga->print();
+            hasinitial+=fpga->nodes.size();
+        }        
+        std::cout << "hasinitial:" << hasinitial << std::endl;
+        bool success = hasinitial==hypergraph->_NumNode;
+        return {hypergraph, fpgas, points, success};
+    }
+    PartitionResult multinitial(HyperGraph &hyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker,unsigned int initial_seed,int num_seeds){
+        std::mt19937 generator(initial_seed); // 使用初始种子初始化随机数生成器
+        std::vector<unsigned int> seeds;
+        // 生成多个种子
+        for (int i = 0; i < num_seeds; ++i) {
+            unsigned int new_seed = generator();
+            seeds.push_back(new_seed);
+            std::cout << "Seed " << i + 1 << ": " << new_seed << std::endl;
+        }
+        std::vector<HyperGraph*> hypergraphs = Initial6::copygraphs(hyperGraph, num_seeds);
+        std::vector<FpgaVector*> fpgasvector = Initial6::copyFpga(Fpgas, num_seeds);
+        std::vector<std::future<Initial6::PartitionResult>> futures;
+        for (int i = 0; i < num_seeds; ++i) {
+            futures.emplace_back(std::async(std::launch::async, run_initial_partitioning, hypergraphs[i], fpgasvector[i], checker, seeds[i]));
+        }
+        std::vector<PartitionResult> results;
+        for (auto& future : futures) {
+            results.push_back(future.get());
+        }
+        auto best_result_it = std::min_element(results.begin(), results.end(), [](const PartitionResult& a, const PartitionResult& b) {
+            if (a.success && b.success) {
+                return a.points < b.points; // 两者都成功时，比较 points
+            } else if (a.success) {
+                return true; // 只有 a 成功时，a 优先
+            } else if (b.success) {
+                return false; // 只有 b 成功时，b 优先
+            } else {
+                return a.points < b.points; // 两者都不成功时，仍然比较 points（尽管这种情况可能不常见）
+            }
+        });
+        return *best_result_it;
     }
 }

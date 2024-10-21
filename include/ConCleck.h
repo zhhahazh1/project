@@ -1,32 +1,40 @@
 class ConstraintChecker {
 public:
-    void check(FpgaVector &fpgas, HyperGraph &hypergraph) {
+    // void check(FpgaVector &fpgas, HyperGraph &hypergraph) {
+    //     HyperedgeSet &hyperedges = hypergraph.Edge_vector;
+    //     for(auto fpga:fpgas){
+    //         fpga->nowcoppoints=0;
+    //     }
+    //     for (auto edge : hyperedges) {
+    //         FpgaMap fpgaCount = edge->getFpgaMap();
+    //         // Check if the edge is assigned to more than one FPGA
+    //         if (fpgaCount.size() > 1) {
+    //             for(auto fpga : fpgaCount) {
+    //                 fpga.first->nowcoppoints+=edge->weight;
+    //             }
+    //         }
+    //         NodeSet errornodes = edge->geterror_nodes(this->maxdistance);
+    //         for (auto node : edge->geterror_nodes(this->maxdistance)) {
+    //             error_nodes.insert(node);
+    //             erroredges.insert(edge);
+    //         }  
+    //     }
+    //     for (auto fpga : fpgas) {
+    //         if (fpga->nowcoppoints > fpga->maxcoppoints) {
+    //             errorfpgas.push_back(fpga);
+    //         }
+    //     }
+    //     if (error_nodes.empty() && erroredges.empty() && errorfpgas.empty()) {
+    //         Satisfy = true;
+    //     }
+    // }
+    int check(FpgaVector &fpgas, HyperGraph &hypergraph) {
         HyperedgeSet &hyperedges = hypergraph.Edge_vector;
-        for(auto fpga:fpgas){
-            fpga->nowcoppoints=0;
-        }
-        for (auto edge : hyperedges) {
-            FpgaMap fpgaCount = edge->getFpgaMap();
-            // Check if the edge is assigned to more than one FPGA
-            if (fpgaCount.size() > 1) {
-                for(auto fpga : fpgaCount) {
-                    fpga.first->nowcoppoints+=edge->weight;
-                }
-            }
-            NodeSet errornodes = edge->geterror_nodes(this->maxdistance);
-            for (auto node : edge->geterror_nodes(this->maxdistance)) {
-                error_nodes.insert(node);
-                erroredges.insert(edge);
-            }  
-        }
+        int cop=0;
         for (auto fpga : fpgas) {
-            if (fpga->nowcoppoints > fpga->maxcoppoints) {
-                errorfpgas.push_back(fpga);
-            }
+            cop+=fpga->nowcoppoints;
         }
-        if (error_nodes.empty() && erroredges.empty() && errorfpgas.empty()) {
-            Satisfy = true;
-        }
+        return cop;
     }
     bool checkadd(Node* node,Fpga* fpga,ConstraintChecker &checker){
         if ((node->fpga == nullptr)&&(fpga->usearea + node->area <= (fpga->area)*1)){

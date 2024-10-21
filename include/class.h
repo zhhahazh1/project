@@ -119,6 +119,9 @@ public:
     Node() : area() {
         // 默认构造函数
     }
+    Node(const Node& other)
+        :area(other.area), ID(other.ID){
+    }
     Node* operator+(Node& other) {
         Node* result = new Node; // 使用默认构造函数初始化
 
@@ -140,20 +143,11 @@ public:
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
     }
+
     NodeSet getneiNode();
     FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
     
-    // 获取节点的所有关联超边的迭代器范围
-    //std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
-        //return std::make_pair(hyperedges.begin(), hyperedges.end());}
-    std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
-        std::vector<size_t> edgeIds;
-        for (auto it = hyperedges.begin(); it != hyperedges.end(); ++it) {
-            edgeIds.push_back((*it)->id);
-        }
-        return std::make_pair(edgeIds.begin(), edgeIds.end());
-    }
     
     NodeSet Inclusion_node;
     FpgaMap gain;
@@ -175,7 +169,9 @@ public:
         }
     }
     Hyperedge(size_t id):id(id){}
-    
+    Hyperedge(const Hyperedge& other)
+        :id(other.id), weight(other.weight){
+    }
     void addNode(Node* node) {
         nodes.insert(node);
         node->addHyperedge(this);
@@ -224,7 +220,54 @@ public:
           _NumNode(Node_vector.size()), _NumEdge(Edge_vector.size()) 
     {
     }
+     // 深拷贝构造函数
+    HyperGraph(const HyperGraph& other) {
+        _NumNode = other._NumNode;
+        _NumEdge = other._NumEdge;
 
+        // 创建映射用于存储旧对象到新对象的映射
+        std::unordered_map<Node*, Node*> nodeMap;
+        std::unordered_map<Hyperedge*, Hyperedge*> edgeMap;
+        // 创建映射用于存储新对象到旧对象的映射
+        std::unordered_map<Node*, Node*> renodeMap;
+        std::unordered_map<Hyperedge*, Hyperedge*> reedgeMap;
+
+        // 先复制所有节点
+        for (const auto& node : other.Node_vector) {
+            Node* newNode = new Node(*node);  // 复制节点数据
+            Node_vector.push_back(newNode);
+            nodeMap[node] = newNode;
+            renodeMap[newNode] = node;
+        }
+
+        // 再复制所有边
+        for (const auto& edge : other.Edge_vector) {
+            Hyperedge* newEdge = new Hyperedge(*edge);  // 复制边数据
+            Edge_vector.insert(newEdge);
+            edgeMap[edge] = newEdge;
+            reedgeMap[newEdge] = edge;
+        }
+        // 更新节点与节点之间的引用
+        for (const auto& node : Node_vector) {
+            for (const auto& neiNode : renodeMap[node]->Inclusion_node) {
+                node->Inclusion_node.insert(nodeMap[neiNode]);
+            }
+        }
+
+        // 更新节点与边之间的引用
+        for (const auto& node : Node_vector) {
+            for (const auto& edge : renodeMap[node]->hyperedges) {
+                node->hyperedges.insert(edgeMap[edge]);  // 添加新的边引用
+            }
+        }
+
+        for (const auto& edge : Edge_vector) {
+            edge->src_node = nodeMap[reedgeMap[edge]->src_node];
+            for (const auto& node : reedgeMap[edge]->nodes) {
+                edge->nodes.insert(nodeMap[node]);  // 添加新的节点引用
+            }
+        }
+    }
 
     NodeVector Node_vector;
     HyperedgeSet Edge_vector;
@@ -241,6 +284,14 @@ public:
         this->ID=id;
         //this->distance_neifpga = nullptr;
     }
+        // 深拷贝构造函数
+    Fpga(const Fpga& other)
+        : area(other.area), ID(other.ID),
+          distance_neifpga(other.distance_neifpga),  // 复制 vector
+          numFpgas(other.numFpgas), maxcoppoints(other.maxcoppoints)
+          {
+    }
+
     void initial_Distance(size_t numFpga) {
         this->numFpgas=numFpga;
         this->distance_neifpga.resize(numFpgas, 0);

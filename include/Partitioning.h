@@ -1,4 +1,4 @@
-#include <limits>
+
 bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
     HyperedgeSet neiedges = node->hyperedges;
     //边约束检查
@@ -102,7 +102,7 @@ void Point (Node* node,ConstraintChecker &checker){
 }
 
 
-void Repoints(Node* repoint_node,Node* moved_node){
+void Repoints(Node* repoint_node,const Node* moved_node){
     
     HyperedgeSet moved_node_neiedges = moved_node->hyperedges;
     HyperedgeSet repoint_node_neiedges = repoint_node->hyperedges;
@@ -173,6 +173,22 @@ void updateEdge_points(Hyperedge* edge){
 }
 
 
+
+std::mutex gainFpgamap_mutex;
+
+void process_neinode(Node* neinode, Node* node, GainFpgaMap& gainFpgamap) {
+    if (neinode->movenable != false) {
+        FpgaMap oldgain = neinode->gain;
+        Repoints(neinode, node);
+
+        // 加锁保护 gainFpgamap，防止数据竞争
+        {
+            std::lock_guard<std::mutex> lock(gainFpgamap_mutex);
+            update_GainFpgaMap(neinode, oldgain, gainFpgamap);  // 线程安全的修改
+        }  // 这里锁会自动释放
+    }
+}
+
 void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     Node* node=move.first;
     Fpga* tarfpga=move.second;
@@ -186,13 +202,18 @@ void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     node->movenable=false;
     delnode_GainFpgaMap(node,node->gain,gainFpgamap);
     int maxpoints = 0;
-    for(auto neinode:neinodes){
-        if(neinode->movenable!=false){
-            FpgaMap oldgain=neinode->gain;
-            Repoints(neinode,node);
-            update_GainFpgaMap(neinode,oldgain,gainFpgamap);
+    std::vector<std::thread> threads;
+    
+    // 为每个 neinode 创建一个线程
+    for (auto neinode : neinodes) {
+        threads.emplace_back(std::thread(process_neinode, neinode, node, std::ref(gainFpgamap)));
+    }
+    
+    // 等待所有线程执行完毕
+    for (auto& t : threads) {
+        if (t.joinable()) {
+            t.join();
         }
-        
     }
 }
 
@@ -214,6 +235,7 @@ void addpoints (HyperGraph &HyperGraph){
 }
 
 void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &checker){
+    
     addpoints (HyperGraph);
     NodeVector &Nodes =HyperGraph.Node_vector;
     
@@ -231,8 +253,11 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
         while (maxgain>0){        
             for(auto movenode:gainFpgamap[maxgain]){
                 if(checkcon(movenode.first,movenode.second,checker)){
+                    START_TIMING();  // 开始计时
                     Move(movenode,gainFpgamap,checker);
                     hasmove=true;
+                    END_TIMING(stats.totalDuration, stats.callCount);  // 结束计时并记录
+                    stats.printStatistics();
                     break;
                 }
             }
