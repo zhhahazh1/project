@@ -119,26 +119,7 @@ public:
     Node() : area() {
         // 默认构造函数
     }
-    Node(const Node& other)
-        :area(other.area), ID(other.ID){
-    }
-    Node* operator+(Node& other) {
-        Node* result = new Node; // 使用默认构造函数初始化
-
-        //节点面积相加
-        result->area = this->area + other.area;
-
-        //两个子节点的超边均连向result节点，使用set避免重复
-        std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
-        uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
-        
-        result->hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
-
-        // 当前节点和other节点都要插入到result节点的nodes集合中
-        result->Inclusion_node.insert(this);
-        result->Inclusion_node.insert(&other);
-        return result;
-    }
+    Node operator+(Node& other);
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
@@ -148,6 +129,16 @@ public:
     FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
     
+    // 获取节点的所有关联超边的迭代器范围
+    //std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
+        //return std::make_pair(hyperedges.begin(), hyperedges.end());}
+    std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
+        std::vector<size_t> edgeIds;
+        for (auto it = hyperedges.begin(); it != hyperedges.end(); ++it) {
+            edgeIds.push_back((*it)->id);
+        }
+        return std::make_pair(edgeIds.begin(), edgeIds.end());
+    }
     
     NodeSet Inclusion_node;
     FpgaMap gain;
@@ -267,6 +258,13 @@ public:
                 edge->nodes.insert(nodeMap[node]);  // 添加新的节点引用
             }
         }
+    }
+
+    void update(NodeVector newNodes, HyperedgeSet newEdges) {
+        Node_vector = newNodes;
+        Edge_vector = newEdges;
+        _NumNode=Node_vector.size();
+        _NumEdge=Edge_vector.size();
     }
 
     NodeVector Node_vector;
@@ -403,6 +401,31 @@ void Node::inifpgae(Fpga* fpga){
 int dis_fpgas(Fpga* fpga1,Fpga* fpga2){
         return fpga1->distance_neifpga[fpga2->ID];
 }
+
+Node Node::operator+(Node& other) {
+        Node result(*this); // 使用当前对象初始化
+
+        //节点面积相加
+        result.area = this->area + other.area;
+
+        //两个子节点的超边均连向result节点，使用set避免重复
+        std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
+        uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
+        
+        result.hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
+        for (Hyperedge* hyperedge : result.hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
+             hyperedge->nodes.insert(this);
+             hyperedge->nodes.erase(&other);
+             if(hyperedge->src_node==&other){
+                hyperedge->src_node=this;
+             }
+        }
+
+        // 当前节点和other节点都要插入到result节点的nodes集合中
+        result.Inclusion_node.insert(this);
+        result.Inclusion_node.insert(&other);
+        return result;
+    }
 // NodeSet Hyperedge::getSingleOccurrenceFPGANodes() {
 //     // 然后收集只出现了一次的FPGA节点
 //     NodeSet singleOccurrenceNodes;
