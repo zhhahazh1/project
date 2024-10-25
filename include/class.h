@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include <stack>
 
 // 前向声明
 class Node;
@@ -129,17 +130,6 @@ public:
     FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
     
-    // 获取节点的所有关联超边的迭代器范围
-    //std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
-        //return std::make_pair(hyperedges.begin(), hyperedges.end());}
-    std::pair<HyperedgeIterator, HyperedgeIterator> incidentEdges() const {
-        std::vector<size_t> edgeIds;
-        for (auto it = hyperedges.begin(); it != hyperedges.end(); ++it) {
-            edgeIds.push_back((*it)->id);
-        }
-        return std::make_pair(edgeIds.begin(), edgeIds.end());
-    }
-    
     NodeSet Inclusion_node;
     FpgaMap gain;
     std::unordered_map<Fpga*, std::unordered_map<Hyperedge*,int>> gain_edge;
@@ -183,7 +173,7 @@ public:
     // };
     //返回超边中距离源节点超过maxdistance的节点
     NodeSet geterror_nodes(int maxdistance){
-        Fpga* src_fpga=this->src_node->fpga;
+        Fpga* src_fpga=this->src_node.top()->fpga;
         NodeSet error_nodes;
         for (auto node:nodes){
             int distance=dis_fpgas(src_fpga, node->fpga);
@@ -196,7 +186,7 @@ public:
     void setWeight(int w) {
         weight = w;
     }
-    Node* src_node;
+    std::stack<Node*> src_node;
     NodeSet nodes;
     size_t id;
     int points=0;
@@ -253,7 +243,7 @@ public:
         }
 
         for (const auto& edge : Edge_vector) {
-            edge->src_node = nodeMap[reedgeMap[edge]->src_node];
+            edge->src_node.top() = nodeMap[reedgeMap[edge]->src_node.top()];
             for (const auto& node : reedgeMap[edge]->nodes) {
                 edge->nodes.insert(nodeMap[node]);  // 添加新的节点引用
             }
@@ -416,8 +406,8 @@ Node Node::operator+(Node& other) {
         for (Hyperedge* hyperedge : result.hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
              hyperedge->nodes.insert(this);
              hyperedge->nodes.erase(&other);
-             if(hyperedge->src_node==&other){
-                hyperedge->src_node=this;
+             if(hyperedge->src_node.top()==&other){
+                hyperedge->src_node.push(this);
              }
         }
 

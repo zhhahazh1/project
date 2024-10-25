@@ -106,7 +106,7 @@ HyperedgeSet readEdges(const std::string filename, NodeVector& NodeVector) {
         size_t node_id;
         std::regex_search(srnode_name, match, node_regex);
         node_id = std::stoi(match[1].str())-1; 
-        edge->src_node=NodeVector[node_id];
+        edge->src_node.push(NodeVector[node_id]);
         edge->addNode(NodeVector[node_id]);
         int weight;
         iss >> weight;
@@ -155,7 +155,7 @@ FpgaVector readFpgas(const std::string filename){
     return fpgas;
 }
 
-void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector &fpgas){
+/*void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector &fpgas){
     std::ifstream infile(filename);
     std::string line;
     std::getline(infile, line);
@@ -183,5 +183,5 @@ void readtopo(const std::string filename, ConstraintChecker &checker,FpgaVector 
         BFS(i,adjList,fpgas);
     }
     delete[] adjList;
-}
+}*/
 
