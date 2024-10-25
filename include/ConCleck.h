@@ -39,8 +39,9 @@ public:
     bool checkadd(Node* node,Fpga* fpga,ConstraintChecker &checker){
         if ((node->fpga == nullptr)&&(fpga->usearea + node->area <= (fpga->area)*1)){
             for (auto& edge : node->hyperedges) {
-                if(edge->src_node->fpga!=nullptr){
-                    if (dis_fpgas(edge->src_node->fpga,fpga)>checker.maxdistance){
+                Node* source_node = edge->src_node.top();
+                if(source_node->fpga!=nullptr){
+                    if (dis_fpgas(source_node->fpga,fpga)>checker.maxdistance){
                         return false;
                     }
                 }

@@ -120,6 +120,9 @@ public:
     Node() : area() {
         // 默认构造函数
     }
+    Node(const Node& other)
+        :area(other.area), ID(other.ID){
+    }
     Node operator+(Node& other);
     
     void addHyperedge(Hyperedge* hyperedge) {
@@ -219,7 +222,7 @@ public:
         _NumNode = other._NumNode;
         _NumEdge = other._NumEdge;
 
-        // 创建映射用于存储旧对象到新对象的映射
+        // 创建映射用于存储旧对象到新对象的映射[旧，新]
         std::unordered_map<Node*, Node*> nodeMap;
         std::unordered_map<Hyperedge*, Hyperedge*> edgeMap;
         // 创建映射用于存储新对象到旧对象的映射
@@ -256,7 +259,17 @@ public:
         }
 
         for (const auto& edge : Edge_vector) {
-            edge->src_node.top() = nodeMap[reedgeMap[edge]->src_node.top()];
+            std::stack<Node*> tempStack = reedgeMap[edge]->src_node;//复制一份操作
+            std::stack<Node*> mid;
+            while (!tempStack.empty()) {
+                auto node = tempStack.top();
+                tempStack.pop();
+                mid.push(nodeMap[node]);
+            }
+            while (!mid.empty()) {
+                edge->src_node.push(nodeMap[mid.top()]);
+                mid.pop();
+            }
             for (const auto& node : reedgeMap[edge]->nodes) {
                 edge->nodes.insert(nodeMap[node]);  // 添加新的节点引用
             }

@@ -3,7 +3,7 @@ bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
     HyperedgeSet neiedges = node->hyperedges;
     //边约束检查
     for (auto edge:neiedges){
-        if(node==edge->src_node){
+        if(node==edge->src_node.top()){
             FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
             fpgacount[node->fpga]--;
             for (auto fpga:fpgacount){
@@ -16,7 +16,7 @@ bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
             }
         }
         else{
-            int distance =dis_fpgas(tarfpga,edge->src_node->fpga);
+            int distance =dis_fpgas(tarfpga,edge->src_node.top()->fpga);
             if (distance>checker.maxdistance){
                         return false;
             }
@@ -61,7 +61,7 @@ int onepoint(Node* node,Hyperedge* edge,Fpga* tar_fpga){
     FpgaMap fpgas=edge->fpgaCount;//这条边所包含的fpga
     Fpga* nor_fpga=node->fpga;//移动前位置的fpga
     int points0=edge->points;//边的初始分数
-    if (node==edge->src_node){
+    if (node==edge->src_node.top()){
         fpgas[nor_fpga]--;
         fpgas[tar_fpga]++;
         if (fpgas[nor_fpga] == 0) {
@@ -74,7 +74,7 @@ int onepoint(Node* node,Hyperedge* edge,Fpga* tar_fpga){
         gain=points0-points1;              
     }
     else{
-        Fpga* src_fpga=edge->src_node->fpga;//边的源节点
+        Fpga* src_fpga=edge->src_node.top()->fpga;//边的源节点
         auto it = fpgas.find(tar_fpga);
         if(fpgas[nor_fpga]==1){//如果这条边只有这个节点在这个foga中，则会加分
             gain=+dis_fpgas(src_fpga,nor_fpga);
@@ -163,7 +163,7 @@ void update_GainFpgaMap (Node* node,FpgaMap oldgain, GainFpgaMap &gainFpgamap){
 
 
 void updateEdge_points(Hyperedge* edge){
-    Fpga* src_fpga=edge->src_node->fpga;//边的源节点
+    Fpga* src_fpga=edge->src_node.top()->fpga;//边的源节点
     FpgaMap fpgas=edge->fpgaCount;
     int points0=0;
     for (auto fpga:fpgas){
@@ -241,7 +241,7 @@ void addpoints (HyperGraph &HyperGraph){
     HyperedgeSet &edges=HyperGraph.Edge_vector;
 
     for(auto edge:edges){
-        Fpga* src_fpga=edge->src_node->fpga;//边的源节点
+        Fpga* src_fpga=edge->src_node.top()->fpga;//边的源节点
         FpgaMap fpgas=edge->fpgaCount;
         int points0=0;
         for (auto fpga:fpgas){

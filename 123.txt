@@ -1,0 +1,3 @@
+一个稀疏化函数
+graphvector sparse_graph(HyperGraph, int n, int m)//HyperGraph为输入的图像，n为输出的图像数量，m为hash函数的个数
+{}
