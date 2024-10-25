@@ -214,11 +214,13 @@ namespace Initial6{
         }
         return fpgasvector;
     }
+    std::mutex seed_mutex;
     PartitionResult run_initial_partitioning(HyperGraph* hypergraph, FpgaVector* fpgas, ConstraintChecker checker, unsigned int seed) {
-        std::lock_guard<std::mutex> lock(seed_mutex);
+        
         Initial6::InitialPartitioning(*hypergraph, *fpgas, checker, seed);
         int points = checker.check(*fpgas, *hypergraph);
         int hasinitial=0;
+        std::lock_guard<std::mutex> lock(seed_mutex);
         for(auto fpga: *fpgas){
             fpga->print();
             hasinitial+=fpga->nodes.size();
@@ -257,6 +259,19 @@ namespace Initial6{
                 return a.points < b.points; // 两者都不成功时，仍然比较 points（尽管这种情况可能不常见）
             }
         });
+        for(auto& result:results){
+            if(&result != &(*best_result_it)){
+                result.hypergraph->clear();
+                for(auto fpga:*result.fpgas){
+                    delete fpga;
+                }
+                delete result.hypergraph;
+                delete result.fpgas;
+            }
+            else{
+                int a=0;
+            }
+        }
         return *best_result_it;
     }
 }

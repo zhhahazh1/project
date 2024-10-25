@@ -189,6 +189,12 @@ void process_neinode(Node* neinode, Node* node, GainFpgaMap& gainFpgamap) {
     }
 }
 
+// 包装函数，用于处理一部分 neinode
+void process_neinode_range(std::set<Node*>::iterator start, std::set<Node*>::iterator end, Node* node, GainFpgaMap& gainFpgamap) {
+    for (auto it = start; it != end; ++it) {
+        process_neinode(*it, node, gainFpgamap);
+    }
+}
 void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     Node* node=move.first;
     Fpga* tarfpga=move.second;
@@ -202,19 +208,30 @@ void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     node->movenable=false;
     delnode_GainFpgaMap(node,node->gain,gainFpgamap);
     int maxpoints = 0;
+
+    START_TIMING();  // 开始计时
     std::vector<std::thread> threads;
-    
-    // 为每个 neinode 创建一个线程
-    for (auto neinode : neinodes) {
-        threads.emplace_back(std::thread(process_neinode, neinode, node, std::ref(gainFpgamap)));
+    // 获取系统的核心数
+    unsigned int num_cores = std::thread::hardware_concurrency();
+    // 计算每个线程处理的 neinode 数量
+    size_t num_neinodes = neinodes.size();
+    // 限制线程数不能超过节点数
+    unsigned int actual_threads = std::min(num_cores, static_cast<unsigned int>(num_neinodes));
+    size_t chunk_size = (num_neinodes + actual_threads - 1) / actual_threads; // 向上取整
+    // 为每个核心创建一个线程
+    for (unsigned int i = 0; i < actual_threads; ++i) {
+        auto start = std::next(neinodes.begin(), i * chunk_size);
+        auto end = (i == actual_threads - 1) ? neinodes.end() : std::next(start, chunk_size);
+        threads.emplace_back(std::thread(process_neinode_range, start, end, node, std::ref(gainFpgamap)));
     }
-    
     // 等待所有线程执行完毕
     for (auto& t : threads) {
         if (t.joinable()) {
             t.join();
         }
     }
+    END_TIMING(stats.totalDuration, stats.callCount);  // 结束计时并记录
+    stats.printStatistics();
 }
 
 
@@ -253,11 +270,10 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
         while (maxgain>0){        
             for(auto movenode:gainFpgamap[maxgain]){
                 if(checkcon(movenode.first,movenode.second,checker)){
-                    START_TIMING();  // 开始计时
+                    
                     Move(movenode,gainFpgamap,checker);
                     hasmove=true;
-                    END_TIMING(stats.totalDuration, stats.callCount);  // 结束计时并记录
-                    stats.printStatistics();
+                    
                     break;
                 }
             }

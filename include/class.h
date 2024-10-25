@@ -201,6 +201,19 @@ public:
           _NumNode(Node_vector.size()), _NumEdge(Edge_vector.size()) 
     {
     }
+    void clear(){
+        for(auto node:Node_vector){
+            delete node;
+        }
+        for(auto edge:Edge_vector){
+            delete edge;
+        }
+    }
+    void remove(){
+        for(auto node:Node_vector){
+            node->movenable=true;
+        }
+    }
      // 深拷贝构造函数
     HyperGraph(const HyperGraph& other) {
         _NumNode = other._NumNode;

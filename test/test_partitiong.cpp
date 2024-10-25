@@ -1,20 +1,23 @@
 #include <cstdlib>  // 包含rand()和srand()
 #include <ctime>    // 包含time()
+#include <stdexcept>  // 包含标准异常库
 #include <random>
+#include <limits>
+#include <mutex>
+#include <thread>
+#include <future>
+
+
+#include <my_time.h>
 #include <class.h>
 #include<ConCleck.h>
 #include <read.h>
-#include<Initial1.h>
-#include<Initial2.h>
-#include<Initial3.h>
-#include<Initial4.h>
-#include<Initial5.h>
 #include<Initial6.h>
-#include<Initial7.h>
 #include<con_initial.h>
 // #include<sparsification.h>
 
 #include<Partitioning.h>
+#include<write.h>
 int main() {
     std::string desing_aera = "../exapmle/case01/design.are";
     std::string desing_net = "../exapmle/case01/design.net";
@@ -30,10 +33,10 @@ int main() {
     int hop_max;
     ConstraintChecker checker;
     readtopo(desing_topo,checker,fpgas);
-    int node_indices1[] = {3,6,8,10,11,13};
-    int node_indices2[] = {0,5,9,14};
-    int node_indices3[] = {1,2,4,15};
-    int node_indices4[] = {7,12};
+    int node_indices1[] = {1,4,5,6,7,10};
+    int node_indices2[] = {0,2,3};
+    int node_indices3[] = {8,9,11,13,14};
+    int node_indices4[] = {12,15};
 
     // 将指定的节点添加到 fpgas
 
