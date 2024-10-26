@@ -128,6 +128,7 @@ public:
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
+        hyperedges_less.insert(hyperedge);
     }
 
     NodeSet getneiNode();
@@ -138,6 +139,7 @@ public:
     FpgaMap gain;
     std::unordered_map<Fpga*, std::unordered_map<Hyperedge*,int>> gain_edge;
     HyperedgeSet hyperedges;
+    HyperedgeSet hyperedges_less;
     Fpga* fpga=nullptr; 
     Area area;
     size_t ID;
@@ -473,14 +475,24 @@ Node& Node::operator+=(Node& other) {
     //两个子节点的超边均连向result节点，使用set避免重复
     std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
     uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
-    
     this->hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
+    
+    std::set<Hyperedge*> uniqueedge2(this->hyperedges_less.begin(), this->hyperedges_less.end());
+    uniqueedge2.insert(other.hyperedges_less.begin(), other.hyperedges_less.end());
+    this->hyperedges_less = std::move(uniqueedge2);  // 将uniqueedge内容转移到result的超边集合中
+
     for (Hyperedge* hyperedge : this->hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
             hyperedge->nodes.insert(this);
             hyperedge->nodes.erase(&other);
             if(hyperedge->src_node.top()==&other){
                 hyperedge->src_node.push(this);
             }
+    }
+
+    for(auto edge:this->hyperedges_less){
+        if(edge->nodes.size()==1){
+            this->hyperedges_less.erase(edge);
+        }
     }
 
     // 当前节点和other节点都要插入到result节点的nodes集合中

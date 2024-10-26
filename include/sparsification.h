@@ -184,7 +184,7 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成
     std::vector<std::set<Node*>> clusters;
 
     size_t _Node_Num = Node_Num;
-    while ((_Node_Num) > (Node_Num / 2)) {//nodes点少于原本一半后停止聚类
+    while ((_Node_Num) > (Node_Num / 1.5)) {//nodes点少于原本一半后停止聚类
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
       bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
