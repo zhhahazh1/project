@@ -125,6 +125,7 @@ public:
     }
     Node operator+(Node& other);
     Node& operator+=(Node& other);
+    Node& update_hyperedges_less(Node& other);
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
@@ -476,10 +477,6 @@ Node& Node::operator+=(Node& other) {
     std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
     uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
     this->hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
-    
-    std::set<Hyperedge*> uniqueedge2(this->hyperedges_less.begin(), this->hyperedges_less.end());
-    uniqueedge2.insert(other.hyperedges_less.begin(), other.hyperedges_less.end());
-    this->hyperedges_less = std::move(uniqueedge2);  // 将uniqueedge内容转移到result的超边集合中
 
     for (Hyperedge* hyperedge : this->hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
             hyperedge->nodes.insert(this);
@@ -489,14 +486,17 @@ Node& Node::operator+=(Node& other) {
             }
     }
 
-    for(auto edge:this->hyperedges_less){
-        if(edge->nodes.size()==1){
-            this->hyperedges_less.erase(edge);
-        }
-    }
-
     // 当前节点和other节点都要插入到result节点的nodes集合中
     this->Inclusion_node.insert(&other);
+    return *this;
+}
+
+Node& Node::update_hyperedges_less(Node& other) {
+    for(auto edge:this->hyperedges){
+        if(edge->nodes()){
+            this->hyperedges_less.insert(edge);
+        }
+    }
     return *this;
 }
 // NodeSet Hyperedge::getSingleOccurrenceFPGANodes() {
