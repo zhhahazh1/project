@@ -255,15 +255,38 @@ bool allInclusionNodesEmpty(const NodeVector& nodes) {//判断nodes是否Inclusi
     return true;
 }
 
-void desparseHypergraph(HyperGraph& _HyperGraph){
+void desparseHypergraph(HyperGraph& _HyperGraph){//解稀疏化到原来两倍
   NodeVector& nodes = _HyperGraph.Node_vector;
   HyperedgeSet& edges = _HyperGraph.Edge_vector;
   HyperGraph _HyperGraph1(nodes,edges);
-  while(!allInclusionNodesEmpty(_HyperGraph1.Node_vector)){
+  while((!allInclusionNodesEmpty(_HyperGraph1.Node_vector))&(_HyperGraph1.Node_vector.size()<(2*nodes.size()))){
     _HyperGraph1=desparse_Nodes(_HyperGraph1);
   }
   _HyperGraph=_HyperGraph1;
 }
+
+//nodes全部解稀疏化
+void desparseNodes(NodeVector& nodes){
+  while(!allInclusionNodesEmpty(nodes)){
+      NodeSet nodes_de;
+      for(auto node:nodes){
+        nodes_de.insert(node);
+      }
+      for(auto node:nodes){
+        if(!node->Inclusion_node.empty()){
+          for(auto desparse_node:node->Inclusion_node){//添加inclusion里的node和edge
+            nodes_de.insert(desparse_node);
+          }
+          nodes_de.erase(node);//删除聚合点
+        }
+      }
+      nodes.clear();
+      for(auto node:nodes_de){
+        nodes.push_back(node);
+      }
+  }
+}
+
 /*
 void minihash(){
     std::srand(static_cast<unsigned int>(std::time(0))); // 设置随机种子
