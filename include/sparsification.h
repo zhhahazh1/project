@@ -71,15 +71,15 @@ using HashFunc = MurmurHash<uint32_t>;
 using HashValue = typename HashFunc::HashValue;
 
 //为hash_functions生成hash函数
-  void hash_storage(const size_t hash_num, const size_t Node_Num, std::vector<HashFunc>& hash_functions) {
-    hash_functions.reserve(hash_num);//放置hash函数
-    uint32_t seed=rand();
-    std::default_random_engine eng(seed);
-    std::uniform_int_distribution<uint32_t> rnd;
-    for (size_t i = 0; i < hash_num; ++i) {
-      hash_functions[i].reset(rnd(eng));
-    }
+void hash_storage(const size_t hash_num, std::vector<HashFunc>& hash_functions) {
+  hash_functions.reserve(hash_num);//放置hash函数
+  uint32_t seed=rand();
+  std::default_random_engine eng(seed);
+  std::uniform_int_distribution<uint32_t> rnd;
+  for (size_t i = 0; i < hash_num; ++i) {
+    hash_functions[i].reset(rnd(eng));
   }
+}
 
   //计算顶点邻边的最小hash值
   HashValue minHash(HashFunc hash, std::vector<size_t> edgeIds) {
@@ -104,27 +104,25 @@ HashValue combinedHash(Node* Node_vector, std::vector<HashFunc> hash_functions) 
 }
 
 //计算hash_vectors
-void hash_vectors_calculate(NodeVector& nodes, size_t Node_Num, const size_t hash_num,std::vector<std::vector<HashValue>>& hash_vectors, 
-                                                                          std::vector<HashFunc>& hash_functions){
+void hash_vectors_calculate(NodeVector& nodes, size_t Node_Num, const size_t hash_num,std::vector<std::vector<HashValue>>& hash_vectors, std::vector<HashFunc>& hash_functions){
   hash_vectors.resize(hash_num); //为hash_vectors分配适当空间,放置node在不同hash函数下的minhash值
-    for (auto& vec : hash_vectors) {
-        vec.resize(Node_Num); 
-    }
+  for (auto& vec : hash_vectors) {
+    vec.resize(Node_Num); 
+  }
   for (size_t nodes_id=0; nodes_id < Node_Num; ++nodes_id){
     std::vector<size_t> edgeIds;
     Node* vertex=nodes[nodes_id];
     for (auto& it: vertex->hyperedges) {
-    edgeIds.push_back(it->id);
+      edgeIds.push_back(it->id);
     }
     for (size_t i = 0; i < hash_num; ++i) {
-        hash_vectors[i][nodes_id] = minHash(hash_functions[i], edgeIds);
-      }
+      hash_vectors[i][nodes_id] = minHash(hash_functions[i], edgeIds);
     }
+  }
 }
 
 //寻找hash_vectors中完全相同的数值,相同节点放入同一层cluster
-std::vector<std::set<Node*>> search_identical_columns(NodeVector& nodes, size_t Node_Num, const size_t hash_num,
-                                                    std::vector<std::vector<HashValue>>& hash_vectors) {
+std::vector<std::set<Node*>> search_identical_columns(NodeVector& nodes, size_t Node_Num, const size_t hash_num,std::vector<std::vector<HashValue>>& hash_vectors) {
     std::vector<std::set<Node*>> clusters;
     for (size_t i = 0; i < Node_Num; ++i) {
         for (size_t j = i + 1; j < Node_Num; ++j) {
@@ -144,7 +142,8 @@ std::vector<std::set<Node*>> search_identical_columns(NodeVector& nodes, size_t 
                         cluster.insert(nodes[j]);
                         found = true;
                         break;
-                    } else if (std::find(cluster.begin(), cluster.end(), nodes[j]) != cluster.end()) {
+                    } 
+                    else if (std::find(cluster.begin(), cluster.end(), nodes[j]) != cluster.end()) {
                         // 如果 j 已经存在于某个簇中，将 i 加入该簇
                         cluster.insert(nodes[i]);
                         found = true;
@@ -162,16 +161,17 @@ std::vector<std::set<Node*>> search_identical_columns(NodeVector& nodes, size_t 
   }
 
 //聚合顶点
-void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeVector& nodes){
+void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeVector& nodes,HyperGraph& HyperGraph){
     for (auto cluster : clusters) {
-    Node* node = new Node(); 
-    for (auto Node_identical =cluster.begin();Node_identical!=cluster.end(); Node_identical++) {
-      *node = *node + **Node_identical;
-      auto del_end = std::remove(nodes.begin(), nodes.end(), *Node_identical);
-      nodes.erase(del_end, nodes.end());
+      Node* node = new Node(); 
+      for (auto Node_identical =cluster.begin();Node_identical!=cluster.end(); Node_identical++) {
+        *node += **Node_identical;
+        auto del_end = std::remove(nodes.begin(), nodes.end(), *Node_identical);
+        nodes.erase(del_end, nodes.end());
+      }
+      nodes.push_back(node);
+      HyperGraph.Node_vector_all.push_back(node);
     }
-    nodes.push_back(node);
-  }
 }
 
 void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成稀疏化后的图
@@ -180,21 +180,21 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成
     size_t Node_Num = HyperGraph._NumNode;
     NodeVector& nodes = HyperGraph.Node_vector;
     HyperedgeSet& edges=HyperGraph.Edge_vector;
-    hash_storage(hash_num, Node_Num, hash_functions);
+    hash_storage(hash_num, hash_functions);
     std::vector<std::set<Node*>> clusters;
 
-    size_t _Node_Num = nodes.size();
+    size_t _Node_Num = Node_Num;
     while ((_Node_Num) > (Node_Num / 2)) {//nodes点少于原本一半后停止聚类
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
       bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
       if(hasNonEmptyClusters){
-        aggregrate_Nodes(clusters, nodes);
+        aggregrate_Nodes(clusters, nodes,HyperGraph);
         _Node_Num = nodes.size();
       }
       else{
         hash_num=hash_num-1;
-        hash_storage(hash_num, _Node_Num, hash_functions);
+        hash_storage(hash_num, hash_functions);
       }
     } 
     for(auto edge:edges){//去除多余边   
