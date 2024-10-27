@@ -135,7 +135,7 @@ public:
     NodeSet getneiNode();
     FpgaSet getneifpga();
     void inifpgae(Fpga* fpga);
-    HyperedgeSet getneiedge();
+    //HyperedgeSet getneiedge();
     NodeSet Inclusion_node;
     FpgaMap gain;
     std::unordered_map<Fpga*, std::unordered_map<Hyperedge*,int>> gain_edge;
@@ -143,7 +143,7 @@ public:
     HyperedgeSet hyperedges_less;
     Fpga* fpga=nullptr; 
     Area area;
-    size_t ID;
+    size_t ID=0;
     bool movenable = true;
 };
 // 超边类
@@ -263,6 +263,9 @@ public:
             for (const auto& edge : renodeMap[node]->hyperedges) {
                 node->hyperedges.insert(edgeMap[edge]);  // 添加新的边引用
             }
+            for (const auto& edge : renodeMap[node]->hyperedges_less) {
+                node->hyperedges_less.insert(edgeMap[edge]);  // 添加新的边引用
+            }
         }
 
         for (const auto& edge : this->Edge_vector_all) {
@@ -336,7 +339,7 @@ public:
         //修改已使用面积
         this->usearea+=node->area;
         node->inifpgae(this);
-        for(auto edge:node->hyperedges){
+        for(auto edge:node->hyperedges_less){
             edge->fpgaCount[this]+=1;
             if(edge->fpgaCount.size()>1&&edge->fpgaCount[this]==1){
                 this->nowcoppoints+=edge->weight;
@@ -356,7 +359,7 @@ public:
         //修改已使用面积
         this->usearea-=node->area;
         node->fpga=nullptr;
-        for(auto edge:node->hyperedges){
+        for(auto edge:node->hyperedges_less){
             if(edge->fpgaCount.size()==1){
                 nowcoppoints+=edge->weight;
             }
@@ -405,7 +408,7 @@ public:
 //返回的邻节点不包含自己
 NodeSet Node::getneiNode(){
     NodeSet neiNodes;
-    HyperedgeSet neiedges=this->getneiedge();
+    HyperedgeSet neiedges=this->hyperedges_less;
     for (auto* hyperedge : neiedges) {
         for (auto* node : hyperedge->nodes) {
             if (node != this) {
@@ -415,15 +418,15 @@ NodeSet Node::getneiNode(){
     }
     return neiNodes;
 };
-HyperedgeSet Node::getneiedge(){
-        HyperedgeSet neiedges;
-        for (auto edge :this->hyperedges){
-            if(edge->nodes.size()!=1){
-                neiedges.insert(edge);
-            }
-        }
-        return hyperedges;
-};
+// HyperedgeSet Node::getneiedge(){
+//         HyperedgeSet neiedges;
+//         for (auto edge :this->hyperedges_less){
+//             if(edge->nodes.size()!=1){
+//                 neiedges.insert(edge);
+//             }
+//         }
+//         return hyperedges;
+// };
 //返回的邻居fpga,不包含自己所在的fpga
 FpgaSet Node::getneifpga(){
     FpgaSet neifpgas;

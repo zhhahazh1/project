@@ -38,7 +38,7 @@ int main() {
     readtopo(desing_topo, checker, fpgas);
     buildSparsifiedHypergraph(hyperGraph,100);
     //buildSparsifiedHypergraph(hyperGraph,10);
-    Initial6::PartitionResult result =Initial6::multinitial(hyperGraph, fpgas, checker, initial_seed, 20);
+    Initial6::PartitionResult result =Initial6::multinitial(hyperGraph, fpgas, checker, initial_seed, 1);
     HyperGraph* in_hyperGraph = result.hypergraph;
     FpgaVector* in_fpgas = result.fpgas;
     

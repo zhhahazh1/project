@@ -1,6 +1,6 @@
 
 bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
-    HyperedgeSet neiedges = node->hyperedges;
+    HyperedgeSet neiedges = node->hyperedges_less;
     //边约束检查
     for (auto edge:neiedges){
         if(node==edge->src_node.top()){
@@ -87,7 +87,7 @@ int onepoint(Node* node,Hyperedge* edge,Fpga* tar_fpga){
 }
 void Point (Node* node,ConstraintChecker &checker){
     node->gain.clear();
-    HyperedgeSet neiedges = node->hyperedges;
+    HyperedgeSet neiedges = node->hyperedges_less;
     Fpga* nor_fpga=node->fpga;//移动前位置
     FpgaMap gains;//最后得到的东西
     auto &gain_edge=node->gain_edge;
@@ -104,8 +104,8 @@ void Point (Node* node,ConstraintChecker &checker){
 
 void Repoints(Node* repoint_node,const Node* moved_node){
     
-    HyperedgeSet moved_node_neiedges = moved_node->hyperedges;
-    HyperedgeSet repoint_node_neiedges = repoint_node->hyperedges;
+    HyperedgeSet moved_node_neiedges = moved_node->hyperedges_less;
+    HyperedgeSet repoint_node_neiedges = repoint_node->hyperedges_less;
     FpgaSet tar_fpgas=repoint_node->getneifpga();//移动目标范围
     Fpga* nor_fpga=repoint_node->fpga;//repoint_node移动前位置
     FpgaMap new_gain;
@@ -113,7 +113,7 @@ void Repoints(Node* repoint_node,const Node* moved_node){
     for (auto tar_fpga:tar_fpgas){
         //对于原本就没有的tarfpga，要从头计算
         if(oldgain.find(tar_fpga)==oldgain.end()){
-            for(auto edge:repoint_node->hyperedges){
+            for(auto edge:repoint_node->hyperedges_less){
                 int gain=onepoint(repoint_node,edge,tar_fpga);
                 new_gain[tar_fpga]=gain;
             }
@@ -202,7 +202,7 @@ void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     NodeSet neinodes = node->getneiNode();
     oldfpga->erase_node(node);
     tarfpga->add_node(node);
-    for(auto edge:node->hyperedges){
+    for(auto edge:node->hyperedges_less){
         updateEdge_points(edge);
     }
     node->movenable=false;

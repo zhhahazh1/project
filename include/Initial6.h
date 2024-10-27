@@ -145,7 +145,6 @@ namespace Initial6{
         auto maxEdge = std::max_element(edges.begin(), edges.end(), [](Hyperedge* a, Hyperedge* b) {
             return a->nodes.size() > b->nodes.size();
         });
-        auto a=(*maxEdge);
         Node* startNode=(*maxEdge)->src_node.top();
 
         // BFS遍历
