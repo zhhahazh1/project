@@ -1,6 +1,7 @@
 
 bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
     HyperedgeSet neiedges = node->hyperedges_less;
+    Fpga* nor_fpga=node->fpga;//移动前位置
     //边约束检查
     for (auto edge:neiedges){
         if(node==edge->src_node.top()){
@@ -32,26 +33,32 @@ bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
     for (auto edge:neiedges){
         FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
         fpgacount[tarfpga]+=1;
-        if(fpgacount.size()>1&&fpgacount[tarfpga]==1){//感觉可以改成if(fpgacount[tarfpga]==1)
+        fpgacount[nor_fpga]-=1;
+        if(fpgacount[nor_fpga]==0){
+            fpgacount.erase(nor_fpga);
+        }
+        if(fpgacount[tarfpga]==1){
             tarfpga_nowcop+=edge->weight;
-            if (tarfpga_nowcop>tarfpga->maxcoppoints){
-                return false;
-            }
         }
-        
-    }
-    //检查当前fpga的cop
-    int norfpga_nowcop=node->fpga->nowcoppoints;
-    for (auto edge:neiedges){
-        FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
         if(fpgacount.size()==1){
-            norfpga_nowcop+=edge->weight;
-            if (norfpga_nowcop>node->fpga->maxcoppoints){
-                return false;
-            }
+            tarfpga_nowcop-=edge->weight;
         }
-        
     }
+    if (tarfpga_nowcop>tarfpga->maxcoppoints){
+            return false;
+    }
+    // //检查当前fpga的cop
+    // int norfpga_nowcop=node->fpga->nowcoppoints;
+    // for (auto edge:neiedges){
+    //     FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
+    //     if(fpgacount.size()==1){
+    //         norfpga_nowcop+=edge->weight;
+    //         if (norfpga_nowcop>node->fpga->maxcoppoints){
+    //             return false;
+    //         }
+    //     }
+        
+    // }
     return true;
 }
 
@@ -221,8 +228,16 @@ void Move (NodeMove move,GainFpgaMap &gainFpgamap,ConstraintChecker &checker){
     // 为每个核心创建一个线程
     for (unsigned int i = 0; i < actual_threads; ++i) {
         auto start = std::next(neinodes.begin(), i * chunk_size);
-        auto end = (i == actual_threads - 1) ? neinodes.end() : std::next(start, chunk_size);
-        threads.emplace_back(std::thread(process_neinode_range, start, end, node, std::ref(gainFpgamap)));
+            // 检查剩余元素是否足够分配给当前线程
+        if (std::distance(start, neinodes.end()) <= chunk_size) {
+            // 如果不足，将剩余的所有元素分配给该线程
+            threads.emplace_back(std::thread(process_neinode_range, start, neinodes.end(), node, std::ref(gainFpgamap)));
+            break; // 停止创建更多线程
+        } else {
+            // 正常分配区块
+            auto end = std::next(start, chunk_size);
+            threads.emplace_back(std::thread(process_neinode_range, start, end, node, std::ref(gainFpgamap)));
+        }
     }
     // 等待所有线程执行完毕
     for (auto& t : threads) {
@@ -270,8 +285,9 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
         while (maxgain>0){        
             for(auto movenode:gainFpgamap[maxgain]){
                 if(checkcon(movenode.first,movenode.second,checker)){
-                    
+                    bool a=checker.checkmaxcop(fpgas,HyperGraph);
                     Move(movenode,gainFpgamap,checker);
+                    a=checker.checkmaxcop(fpgas,HyperGraph);
                     hasmove=true;
                     
                     break;

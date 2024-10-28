@@ -113,6 +113,26 @@ namespace Initial6{
             }
         }
     }
+    void con_initial2(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker){
+        NodeVector &nodes=HyperGraph.Node_vector;
+        for(Node* node : nodes){
+            if(node->fpga == nullptr){
+                
+                for(auto fpga:node->getneifpga()){
+                    if(checker.checkadd2(node,fpga,checker)){ 
+                        fpga->add_node(node);
+                    }
+                }
+                int hasinitial=0;
+                for(auto fpga: Fpgas){
+                    fpga->print();
+                    hasinitial+=fpga->nodes.size();
+                }        
+                std::cout << "hasinitial:" << hasinitial << std::endl;
+
+            }
+        }
+    }
     /**
      * @brief Performs initial partitioning of nodes in a hypergraph across multiple FPGAs.
      * 
@@ -192,6 +212,14 @@ namespace Initial6{
         }
         Initial6::growNodes(Fpgas,checker,engine);
         con_initial(HyperGraph,Fpgas,checker);
+        int hasinitial=0;
+        for(auto fpga: Fpgas){
+            fpga->print();
+            hasinitial+=fpga->nodes.size();
+        }        
+        std::cout << "hasinitial:" << hasinitial << std::endl;
+        con_initial2(HyperGraph,Fpgas,checker);
+        // con_initial2(HyperGraph,Fpgas,checker);
     }
 
     std::vector<HyperGraph*> copygraphs(HyperGraph &Graph, int num) {
@@ -217,7 +245,7 @@ namespace Initial6{
     PartitionResult run_initial_partitioning(HyperGraph* hypergraph, FpgaVector* fpgas, ConstraintChecker checker, unsigned int seed) {
         
         Initial6::InitialPartitioning(*hypergraph, *fpgas, checker, seed);
-        int points = checker.check(*fpgas, *hypergraph);
+        int points = checker.check(*fpgas);
         int hasinitial=0;
         std::lock_guard<std::mutex> lock(seed_mutex);
         for(auto fpga: *fpgas){

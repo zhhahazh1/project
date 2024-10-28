@@ -125,11 +125,23 @@ public:
     }
     Node operator+(Node& other);
     Node& operator+=(Node& other);
-    Node& update_hyperedges_less(Node& other);
+    void update_hyperedges_less();
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
         hyperedges_less.insert(hyperedge);
+    }
+    std::string getid(){
+        std::string id=std::to_string(ID)+"(";
+        if(Inclusion_node.size()==0){
+            return std::to_string(ID);
+        }
+        else{
+            for(auto innode:Inclusion_node){
+                id+=innode->getid()+",";
+            }
+        }
+        return id+")";
     }
 
     NodeSet getneiNode();
@@ -192,6 +204,12 @@ public:
     }
     void setWeight(int w) {
         weight = w;
+    }
+    void updateFpgaCount() {
+        fpgaCount.clear();
+        for (auto node : nodes) {
+            fpgaCount[node->fpga] += 1;
+        }
     }
     std::stack<Node*> src_node;
     NodeSet nodes;
@@ -300,6 +318,11 @@ public:
         _NumNode=Node_vector.size();
         _NumEdge=Edge_vector.size();
     }
+    void update_edge_fpgacont(){
+        for (auto edge : Edge_vector) {
+            edge->updateFpgaCount();
+        }
+    }
 
     NodeVector Node_vector;
     HyperedgeSet Edge_vector;
@@ -331,6 +354,13 @@ public:
         this->distance_neifpga.resize(numFpgas, 0);
         //adjList = new std::vector<int>[numFpgas];
     }
+    void desparse_Node(Node* node){
+        this->nodes.erase(node);
+        for(auto node:node->Inclusion_node){
+            node->fpga=this;
+            this->nodes.insert(node);
+        }
+    }
     void add_node(Node* node){
         if(node->fpga!=nullptr){
             throw std::invalid_argument("node'fpga is not nullptr");
@@ -360,14 +390,17 @@ public:
         this->usearea-=node->area;
         node->fpga=nullptr;
         for(auto edge:node->hyperedges_less){
-            if(edge->fpgaCount.size()==1){
-                nowcoppoints+=edge->weight;
-            }
             edge->fpgaCount[this]-=1;
-            if(edge->fpgaCount.size()>1&&edge->fpgaCount[this]==0){
+            if(edge->fpgaCount[this]==0){
                 this->nowcoppoints-=edge->weight;
                 edge->fpgaCount.erase(this);
-            }
+                //此后这条边不被切割的话，把原本的fpga的coppoints减去
+                if(edge->fpgaCount.size()==1){
+                    for(auto fpga:edge->fpgaCount){
+                        fpga.first->nowcoppoints-=edge->weight;
+                    }
+                }
+            } 
         }
     }
 
@@ -376,16 +409,16 @@ public:
     void print(){
         std::cout << "FPGA" << ID << " "<<this->nodes.size()<<" ";
         std::cout << nowcoppoints << " ";
-        int count = 0;
-        int max_nodes_to_print = 20;
-        for (auto* node : this->nodes) {
-            if (count >= max_nodes_to_print) {
-                std::cout << "...";
-                break;
-            }
-            std::cout << node->ID << ",";
-            ++count;
-        }
+        // int count = 0;
+        // int max_nodes_to_print = 10;
+        // for (auto* node : this->nodes) {
+        //     if (count >= max_nodes_to_print) {
+        //         std::cout << "...";
+        //         break;
+        //     }
+        //     std::cout << node->getid() << ", ";
+        //     ++count;
+        // }
         std::cout << std::endl;
     }
     void print_nowcoppoints(){
@@ -402,6 +435,7 @@ public:
     size_t numFpgas;
     int maxcoppoints;
     int nowcoppoints=0;
+    int checkcoppoints=0;
     bool areaconstrain;
     bool copconstrain;
 };
@@ -488,19 +522,22 @@ Node& Node::operator+=(Node& other) {
                 hyperedge->src_node.push(this);
             }
     }
+    this->update_hyperedges_less();
 
     // 当前节点和other节点都要插入到result节点的nodes集合中
     this->Inclusion_node.insert(&other);
     return *this;
 }
 
-Node& Node::update_hyperedges_less(Node& other) {
-    for(auto edge:this->hyperedges){
-        if(edge->nodes()){
+void Node::update_hyperedges_less() {
+    //清空hyperedges_less
+    this->hyperedges_less.clear();
+    //重新添加
+    for (auto edge : this->hyperedges) {
+        if (edge->nodes.size() != 1) {
             this->hyperedges_less.insert(edge);
         }
     }
-    return *this;
 }
 // NodeSet Hyperedge::getSingleOccurrenceFPGANodes() {
 //     // 然后收集只出现了一次的FPGA节点

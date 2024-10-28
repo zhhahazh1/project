@@ -184,7 +184,7 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成
     std::vector<std::set<Node*>> clusters;
 
     size_t _Node_Num = Node_Num;
-    while ((_Node_Num) > (Node_Num / 1.5)) {//nodes点少于原本一半后停止聚类
+    while ((_Node_Num) > (Node_Num / 8)) {//nodes点少于原本一半后停止聚类
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
       bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
@@ -193,14 +193,20 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成
         _Node_Num = nodes.size();
       }
       else{
-        hash_num=hash_num-1;
+        hash_num=hash_num;
         hash_storage(hash_num, hash_functions);
       }
     } 
+    std::queue<Hyperedge*> q;
     for(auto edge:edges){//去除多余边   
       if(edge->nodes.size()==1){
-        edges.erase(edge);
+        q.push(edge);
       }
+    }
+    while (!q.empty()) {
+      auto edge = q.front();
+      q.pop();
+      edges.erase(edge);
     }
     HyperGraph.update(nodes,edges);
 
@@ -217,11 +223,14 @@ HyperGraph desparse_Nodes(HyperGraph& _HyperGraph){
   for(auto node:nodes){
     if(!node->Inclusion_node.empty()){
       for(auto desparse_node:node->Inclusion_node){//添加inclusion里的node和edge
+        node->fpga->desparse_Node(node);//zwl添加
+
         nodes_de.insert(desparse_node);
         for(auto edge:desparse_node->hyperedges){
           edge->nodes.insert(desparse_node);
         }
       }
+
       nodes_de.erase(node);//删除聚合点
       for(auto edge:node->hyperedges){
         edge->nodes.erase(node);
