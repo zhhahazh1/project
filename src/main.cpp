@@ -13,9 +13,12 @@
 #include <class.h>
 #include<ConCleck.h>
 #include <read.h>
-#include<Initial6.h>
-#include<con_initial.h>
 #include<sparsification.h>
+#include<Initial6.h>
+
+
+
+
 
 #include<Partitioning.h>
 #include<write.h>
@@ -36,7 +39,7 @@ int main() {
     int hop_max;
     ConstraintChecker checker;
     readtopo(desing_topo, checker, fpgas);
-    buildSparsifiedHypergraph(hyperGraph,3);
+    buildSparsifiedHypergraph(hyperGraph,10);
     Initial6::PartitionResult result =Initial6::multinitial(hyperGraph, fpgas, checker, initial_seed, 1);
     HyperGraph* in_hyperGraph = result.hypergraph;
     FpgaVector* in_fpgas = result.fpgas;
@@ -47,7 +50,7 @@ int main() {
         hasinitial+=fpga->nodes.size();
     }        
     std::cout << "hasinitial:" << hasinitial << std::endl;
-
+    checker.checkarea(*in_fpgas);
     Partitioning(*in_hyperGraph,*in_fpgas,checker);
     hasinitial=0;
     for(auto fpga: *in_fpgas){
@@ -55,30 +58,32 @@ int main() {
         hasinitial+=fpga->nodes.size();
     }        
     std::cout << "hasinitial:" << hasinitial << std::endl;
-
-    desparseHypergraph(*in_hyperGraph);
-    in_hyperGraph->update_edge_fpgacont();
-    in_hyperGraph->remove();
-    Partitioning(*in_hyperGraph,*in_fpgas,checker);
-    hasinitial=0;
-    for(auto fpga: *in_fpgas){
-        fpga->print();
-        hasinitial+=fpga->nodes.size();
-    }        
-    std::cout << "hasinitial:" << hasinitial << std::endl;
-
-    desparseHypergraph(*in_hyperGraph);
-    in_hyperGraph->update_edge_fpgacont();
-    in_hyperGraph->remove();
-    Partitioning(*in_hyperGraph,*in_fpgas,checker);
-    hasinitial=0;
-    for(auto fpga: *in_fpgas){
-        fpga->print();
-        hasinitial+=fpga->nodes.size();
-    }        
-    std::cout << "hasinitial:" << hasinitial << std::endl;
+    checker.checkarea(*in_fpgas);
     
+    desparseHypergraph(*in_hyperGraph);
+    in_hyperGraph->update_edge_fpgacont();
+    in_hyperGraph->remove();
+    Partitioning(*in_hyperGraph,*in_fpgas,checker);
+    hasinitial=0;
+    for(auto fpga: *in_fpgas){
+        fpga->print();
+        hasinitial+=fpga->nodes.size();
+    }        
+    std::cout << "hasinitial:" << hasinitial << std::endl;
+    checker.checkarea(*in_fpgas);
 
+    desparseHypergraph(*in_hyperGraph);
+    in_hyperGraph->update_edge_fpgacont();
+    in_hyperGraph->remove();
+    Partitioning(*in_hyperGraph,*in_fpgas,checker);
+    hasinitial=0;
+    for(auto fpga: *in_fpgas){
+        fpga->print();
+        hasinitial+=fpga->nodes.size();
+    }        
+    std::cout << "hasinitial:" << hasinitial << std::endl;
+    checker.checkarea(*in_fpgas);
+    writhe(*in_fpgas);
     // 等待所有线程执行完毕
     
 

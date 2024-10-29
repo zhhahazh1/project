@@ -57,6 +57,7 @@ public:
         return true;
     }
     void checkarea(FpgaVector &fpgas){
+        errorfpgas.clear();
         for(auto fpga:fpgas){
             if(fpga->usearea>fpga->area){
                 errorfpgas.push_back(fpga);

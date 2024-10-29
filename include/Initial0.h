@@ -3,7 +3,7 @@
 
 
 
-namespace Initial6{
+namespace Initial0{
     struct PartitionResult {
         HyperGraph* hypergraph;
         FpgaVector* fpgas;
@@ -61,61 +61,11 @@ namespace Initial6{
         }
         return -1; // 理论上不会到达这里
     }
-    // 按照BFS将未分配的节点分配给最近的已分配的FPGA
-    void growNodes(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker,std::mt19937 &engine,int _num) {
-        int num=0;
-        std::vector<std::queue<Node*>> queues(Fpgas.size());
+    
+    void growNode(Fpga* Fpgas,ConstraintChecker &checker){
 
-        // 将每个 FPGA 的已分配节点加入各自的队列
-        for (size_t i = 0; i < Fpgas.size(); ++i) {
-            for (auto& node : Fpgas[i]->nodes) {
-                queues[i].push(node);
-                for (Node* neighbor : node->getneiNode()) {
-                    queues[i].push(neighbor);
-                }
-            }
-        }
-
-        // 循环直至所有队列都为空
-        bool allQueuesEmpty = false;
-        while (!allQueuesEmpty) {
-            allQueuesEmpty = true;
-
-
-            std::shuffle(queues.begin(), queues.end(), engine);
-
-
-            for (size_t i = 0; i < Fpgas.size(); ++i) {
-                if (!queues[i].empty()) {
-                    allQueuesEmpty = false;
-
-                    
-                    while (true){
-                        Node* current = queues[i].front();
-                        queues[i].pop();
-                        if (checker.checkadd(current,Fpgas[i],checker)){
-                                for (Node* neighbor : current->getneiNode()) {
-                                    queues[i].push(neighbor);
-                                }
-                                Fpgas[i]->add_node(current);
-                                num++;
-                                break;
-                        }
-                        if(queues[i].empty()){
-                            break;
-                        }
-                    }
-                }
-
-            }
-            if(num>_num){
-                break;
-            }
-        } 
     }
-
- void growNodes2(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker,std::mt19937 &engine,int _num) {
-        int num=0;
+    void growNodes(std::vector<Fpga*>& Fpgas,ConstraintChecker &checker,std::mt19937 &engine) {
        std::vector<std::set<Hyperedge*, HyperEdgeComparator>> FPGAedges(Fpgas.size());
 
         // 将每个 FPGA 的已分配节点加入各自的队列
@@ -143,7 +93,6 @@ namespace Initial6{
                         for(auto current:currents){
                             if (checker.checkadd(current,Fpgas[i],checker)){
                                 Fpgas[i]->add_node(current);
-                                num++;
                                 for(auto edge:current->hyperedges_less){
                                     FPGAedges[i].insert(edge);
                                 }
@@ -155,9 +104,6 @@ namespace Initial6{
                             // 如果没有添加任何节点，则移除第一个超边
                             FPGAedges[i].erase(FPGAedges[i].begin());
                         }
-                        else{
-                            break;
-                        }
 
                         if(FPGAedges[i].empty()){
                             break;
@@ -166,12 +112,10 @@ namespace Initial6{
                 }
 
             }
-            if(num>_num){
-                break;
-            }
         } 
        
     }
+
     void con_initial(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker){
         NodeVector &nodes=HyperGraph.Node_vector;
         for(Node* node : nodes){
@@ -269,13 +213,13 @@ namespace Initial6{
         }
         
         //std::cout << "Distance map contains " << distance.size() << " elements." << std::endl;
-        auto farthestFpga = Initial6::getcenterFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
+        auto farthestFpga = Initial0::getcenterFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
         std::vector<int> fpgadis=farthestFpga->distance_neifpga;
         scaleIntegersToMax(fpgadis, maxdis);//将fpga的距离缩放到最大值
         int id = 0;
         std::mt19937 engine(seed);
         for(int dis: fpgadis){
-            int distanceToUse = Initial6::findClosestDistance(re_distance, dis);
+            int distanceToUse = Initial0::findClosestDistance(re_distance, dis);
             
             std::uniform_int_distribution<int> dist(0, re_distance[distanceToUse].size() - 1);
             int randomNumber = dist(engine);
@@ -283,51 +227,15 @@ namespace Initial6{
             re_distance[distanceToUse].erase(re_distance[distanceToUse].begin() + randomNumber);
             id++;
         }
-        Initial6::growNodes(Fpgas,checker,engine,1000);
+        Initial0::growNodes(Fpgas,checker,engine);
+        con_initial(HyperGraph,Fpgas,checker);
         int hasinitial=0;
         for(auto fpga: Fpgas){
             fpga->print();
             hasinitial+=fpga->nodes.size();
         }        
         std::cout << "hasinitial:" << hasinitial << std::endl;
-        Initial6::growNodes2(Fpgas,checker,engine,1000);
-        hasinitial=0;
-        for(auto fpga: Fpgas){
-            fpga->print();
-            hasinitial+=fpga->nodes.size();
-        }        
-        std::cout << "hasinitial:" << hasinitial << std::endl;
-
-        Initial6::growNodes(Fpgas,checker,engine,5000);
-        hasinitial=0;
-        for(auto fpga: Fpgas){
-            fpga->print();
-            hasinitial+=fpga->nodes.size();
-        } 
-        std::cout << "hasinitial:" << hasinitial << std::endl;
-
-        con_initial(HyperGraph,Fpgas,checker);
-        hasinitial=0;
-        for(auto fpga: Fpgas){
-            fpga->print();
-            hasinitial+=fpga->nodes.size();
-        }        
-        std::cout << "hasinitial:" << hasinitial << std::endl;
-        // desparNodeset(HyperGraph);
-        // con_initial(HyperGraph,Fpgas,checker);
-        // hasinitial=0;
-        // for(auto fpga: Fpgas){
-        //     fpga->print();
-        //     hasinitial+=fpga->nodes.size();
-        // }        
-        // std::cout << "hasinitial:" << hasinitial << std::endl;
-        con_initial2(HyperGraph,Fpgas,checker);
-        hasinitial=0;
-        for(auto fpga: Fpgas){
-            fpga->print();
-            hasinitial+=fpga->nodes.size();
-        }        
-        std::cout << "hasinitial:" << hasinitial << std::endl;
+        //con_initial2(HyperGraph,Fpgas,checker);
         // con_initial2(HyperGraph,Fpgas,checker);
     }
 
@@ -353,7 +261,7 @@ namespace Initial6{
     std::mutex seed_mutex;
     PartitionResult run_initial_partitioning(HyperGraph* hypergraph, FpgaVector* fpgas, ConstraintChecker checker, unsigned int seed) {
         
-        Initial6::InitialPartitioning(*hypergraph, *fpgas, checker, seed);
+        Initial0::InitialPartitioning(*hypergraph, *fpgas, checker, seed);
         int points = checker.check(*fpgas);
         int hasinitial=0;
         std::lock_guard<std::mutex> lock(seed_mutex);
@@ -374,9 +282,9 @@ namespace Initial6{
             seeds.push_back(new_seed);
             std::cout << "Seed " << i + 1 << ": " << new_seed << std::endl;
         }
-        std::vector<HyperGraph*> hypergraphs = Initial6::copygraphs(hyperGraph, num_seeds);
-        std::vector<FpgaVector*> fpgasvector = Initial6::copyFpga(Fpgas, num_seeds);
-        std::vector<std::future<Initial6::PartitionResult>> futures;
+        std::vector<HyperGraph*> hypergraphs = Initial0::copygraphs(hyperGraph, num_seeds);
+        std::vector<FpgaVector*> fpgasvector = Initial0::copyFpga(Fpgas, num_seeds);
+        std::vector<std::future<Initial0::PartitionResult>> futures;
         for (int i = 0; i < num_seeds; ++i) {
             futures.emplace_back(std::async(std::launch::async, run_initial_partitioning, hypergraphs[i], fpgasvector[i], checker, seeds[i]));
         }

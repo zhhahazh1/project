@@ -72,6 +72,7 @@ using HashValue = typename HashFunc::HashValue;
 
 //为hash_functions生成hash函数
 void hash_storage(const size_t hash_num, std::vector<HashFunc>& hash_functions) {
+  hash_functions.clear();
   hash_functions.reserve(hash_num);//放置hash函数
   uint32_t seed=rand();
   std::default_random_engine eng(seed);
@@ -105,6 +106,7 @@ HashValue combinedHash(Node* Node_vector, std::vector<HashFunc> hash_functions) 
 
 //计算hash_vectors
 void hash_vectors_calculate(NodeVector& nodes, size_t Node_Num, const size_t hash_num,std::vector<std::vector<HashValue>>& hash_vectors, std::vector<HashFunc>& hash_functions){
+  hash_vectors.clear();
   hash_vectors.resize(hash_num); //为hash_vectors分配适当空间,放置node在不同hash函数下的minhash值
   for (auto& vec : hash_vectors) {
     vec.resize(Node_Num); 
@@ -180,20 +182,23 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num) {//生成
     size_t Node_Num = HyperGraph._NumNode;
     NodeVector& nodes = HyperGraph.Node_vector;
     HyperedgeSet& edges=HyperGraph.Edge_vector;
-    hash_storage(hash_num, hash_functions);
+    
     std::vector<std::set<Node*>> clusters;
 
     size_t _Node_Num = Node_Num;
-    while ((_Node_Num) > (Node_Num / 8)) {//nodes点少于原本一半后停止聚类
+    while ((_Node_Num) > (Node_Num / 4)) {//nodes点少于原本一半后停止聚类
+      hash_storage(hash_num, hash_functions);
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
       bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
       if(hasNonEmptyClusters){
+        int _Node_Num2 = nodes.size();
         aggregrate_Nodes(clusters, nodes,HyperGraph);
         _Node_Num = nodes.size();
+        hash_num=_Node_Num2-_Node_Num>100?hash_num:hash_num-1;
       }
       else{
-        hash_num=hash_num;
+        hash_num=hash_num-1;
         hash_storage(hash_num, hash_functions);
       }
     } 
@@ -254,6 +259,44 @@ HyperGraph desparse_Nodes(HyperGraph& _HyperGraph){
   HyperGraph HyperGraph_de(nodes,edges);
   return HyperGraph_de;
 }
+HyperGraph desparse_Node(HyperGraph& _HyperGraph,Node* node){
+  NodeVector nodes = _HyperGraph.Node_vector;
+  HyperedgeSet edges = _HyperGraph.Edge_vector;
+  NodeSet nodes_de;
+  for(auto node:nodes){
+    nodes_de.insert(node);
+  }
+  if(!node->Inclusion_node.empty()){
+    for(auto desparse_node:node->Inclusion_node){//添加inclusion里的node和edge
+
+      nodes_de.insert(desparse_node);
+      for(auto edge:desparse_node->hyperedges){
+        edge->nodes.insert(desparse_node);
+      }
+    }
+
+    nodes_de.erase(node);//删除聚合点
+    for(auto edge:node->hyperedges){
+      edge->nodes.erase(node);
+      if(edge->src_node.top()==node){
+        edge->src_node.pop();
+      }
+    }
+  }
+  for(auto node:nodes_de){//edge解稀疏化
+    for(auto edge:node->hyperedges){
+      if(edge->nodes.size()!=1){
+        edges.insert(edge);
+      }
+    }
+  }
+  nodes.clear();
+  for(auto node:nodes_de){
+    nodes.push_back(node);
+  }
+  HyperGraph HyperGraph_de(nodes,edges);
+  return HyperGraph_de;
+}
 
 bool allInclusionNodesEmpty(const NodeVector& nodes) {//判断nodes是否Inclusion_node
     for (const auto* node : nodes) {
@@ -270,6 +313,21 @@ void desparseHypergraph(HyperGraph& _HyperGraph){//解稀疏化到原来两倍
   HyperGraph _HyperGraph1(nodes,edges);
   while((!allInclusionNodesEmpty(_HyperGraph1.Node_vector))&(_HyperGraph1.Node_vector.size()<(2*nodes.size()))){
     _HyperGraph1=desparse_Nodes(_HyperGraph1);
+  }
+  _HyperGraph=_HyperGraph1;
+}
+void  desparNodeset(HyperGraph& _HyperGraph){
+  NodeVector nodevec;
+  NodeVector& nodes = _HyperGraph.Node_vector;
+  HyperedgeSet& edges = _HyperGraph.Edge_vector;
+  for(auto node:nodes){
+    if(node->fpga==nullptr){
+      nodevec.push_back(node);
+    }
+  }
+  HyperGraph _HyperGraph1(nodes,edges);
+  for (auto node : nodevec) {
+    _HyperGraph1=desparse_Node(_HyperGraph1,node);
   }
   _HyperGraph=_HyperGraph1;
 }

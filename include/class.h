@@ -17,6 +17,7 @@ class Fpga;
 using NodeVector = std::vector<Node*>;
 using NodeSet = std::set<Node*>;
 using HyperedgeSet = std::set<Hyperedge*>;
+using HyperedgeVector = std::vector<Hyperedge*>;
 using FpgaVector = std::vector<Fpga*>;
 using FpgaSet = std::set<Fpga*>;
 using FpgaMap = std::unordered_map<Fpga*, int>;
@@ -202,6 +203,14 @@ public:
         }
         return error_nodes;
     }
+    Node*  get_one_havenot_node()const{
+        for (auto node:nodes){
+            if (node->fpga==nullptr){
+                return node;
+            }
+        }
+        return nullptr;
+    }
     void setWeight(int w) {
         weight = w;
     }
@@ -213,6 +222,7 @@ public:
     }
     std::stack<Node*> src_node;
     NodeSet nodes;
+    int num_ininodes=0;
     size_t id;
     int points=0;
     FpgaMap fpgaCount;
@@ -361,6 +371,32 @@ public:
             this->nodes.insert(node);
         }
     }
+    void add_node0(Node* node){
+        if(node->fpga!=nullptr){
+            throw std::invalid_argument("node'fpga is not nullptr");
+        }
+        this->nodes.insert(node);
+        //修改已使用面积
+        this->usearea+=node->area;
+        node->inifpgae(this);
+        for(auto edge:node->hyperedges_less){
+            edge->fpgaCount[this]+=1;
+            edge->num_ininodes+=1;
+            if(edge->fpgaCount.size()>1&&edge->fpgaCount[this]==1){
+                this->nowcoppoints+=edge->weight;
+            }
+            //此后这条边被切割了，把原本的fpga的coppoints加上
+            if(edge->fpgaCount.size()==2&&edge->fpgaCount[this]==1){
+                for(auto fpga:edge->fpgaCount){
+                    if(fpga.first!=this){
+                        fpga.first->nowcoppoints+=edge->weight;
+                    }
+                }
+            }
+            this->edges.insert(edge);
+        }
+    }
+
     void add_node(Node* node){
         if(node->fpga!=nullptr){
             throw std::invalid_argument("node'fpga is not nullptr");
@@ -403,8 +439,16 @@ public:
             } 
         }
     }
+    HyperedgeSet getneiedge(){
+        HyperedgeSet neiedges;
+        for (auto edge :this->edges){
+            if(edge->nodes.size()!=1){
+                neiedges.insert(edge);
+            }
+        }
+        return neiedges;
+    };
 
-    
 //打印子节点id
     void print(){
         std::cout << "FPGA" << ID << " "<<this->nodes.size()<<" ";
