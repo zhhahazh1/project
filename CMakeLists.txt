@@ -9,7 +9,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src SRC_LIST)
 file(GLOB TEST_SRC_LIST ${PROJECT_SOURCE_DIR}/test/*.cpp) # 查找 test 目录下的所有 .cpp 文件
 
 add_executable(
-    main
+    partitioner
     ${SRC_LIST}
 )
 # 添加测试可执行文件

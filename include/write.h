@@ -2,9 +2,9 @@
 #include <fstream>  // 包含文件流库
 
 
-int writhe(FpgaVector &fpgas) {
+int writhe(FpgaVector &fpgas, std::string& outputFile) {
     // 创建一个输出文件流对象，指定输出文件名
-    std::ofstream outfile("design.fpga.out");
+    std::ofstream outfile(outputFile);
 
     for(auto fpga: fpgas){
         outfile << "FPGA" << fpga->ID+1 << ": ";
