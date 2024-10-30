@@ -126,6 +126,7 @@ public:
     }
     Node operator+(Node& other);
     Node& operator+=(Node& other);
+    //static NodeSet addnodes(NodeSet& nodes);
     void update_hyperedges_less();
     
     void addHyperedge(Hyperedge* hyperedge) {
@@ -157,6 +158,8 @@ public:
     Fpga* fpga=nullptr; 
     Area area;
     size_t ID=0;
+    bool found=false;
+    bool BFSfound=false;
     bool movenable = true;
 };
 // 超边类
@@ -168,6 +171,14 @@ public:
         for (auto* node : nodes) {
             node->addHyperedge(this);
         }
+    }
+    Hyperedge(Node* node1,Node* node2){
+        nodes.insert(node1);
+        nodes.insert(node2);
+        node1->addHyperedge(this);
+        node2->addHyperedge(this);
+        this->weight=0;
+        this->src_node.push(node1);
     }
     Hyperedge(size_t id):id(id){}
     Hyperedge(const Hyperedge& other)
@@ -232,9 +243,17 @@ public:
 class HyperGraph {
 public:
     HyperGraph(NodeVector Node_vector, HyperedgeSet Edge_vector)
-        : Node_vector(Node_vector), Edge_vector(Edge_vector), Node_vector_all(Node_vector), Edge_vector_all(Edge_vector),
+        : Edge_vector(Edge_vector), Node_vector_all(Node_vector), Edge_vector_all(Edge_vector),
           _NumNode(Node_vector.size()), _NumEdge(Edge_vector.size()) 
-    {
+    {    
+        for (auto& node : Node_vector) {
+            this->Node_vector.insert(node);
+        }
+    }
+     HyperGraph(NodeSet Node_vector, HyperedgeSet Edge_vector)
+        : Node_vector(Node_vector),Edge_vector(Edge_vector), Edge_vector_all(Edge_vector),
+          _NumNode(Node_vector.size()), _NumEdge(Edge_vector.size()) 
+    {    
     }
     HyperGraph() : _NumNode(0), _NumEdge(0) {
         // 默认构造函数
@@ -315,14 +334,14 @@ public:
 
         //更新node_vector和edge_vector
         for (const auto& node : other.Node_vector) {
-            this->Node_vector.push_back(nodeMap[node]);
+            this->Node_vector.insert(nodeMap[node]);
         }
         for (const auto& edge : other.Edge_vector) {
             this->Edge_vector.insert(edgeMap[edge]);
         }
     }
 
-    void update(NodeVector newNodes, HyperedgeSet newEdges) {
+    void update(NodeSet newNodes, HyperedgeSet newEdges) {
         Node_vector = newNodes;
         Edge_vector = newEdges;
         _NumNode=Node_vector.size();
@@ -334,7 +353,7 @@ public:
         }
     }
 
-    NodeVector Node_vector;
+    NodeSet Node_vector;
     HyperedgeSet Edge_vector;
     NodeVector Node_vector_all;
     HyperedgeSet Edge_vector_all;
@@ -572,6 +591,31 @@ Node& Node::operator+=(Node& other) {
     this->Inclusion_node.insert(&other);
     return *this;
 }
+// NodeSet Node::addnodes(NodeSet& nodes,NodeSet& Node_all,NodeSet& All_node){
+//     NodeSet newnodes;
+    
+//     auto it = nodes.begin();
+//     while (it != nodes.end()) {
+//         Node* node = new Node();
+
+//         // 使用一个独立的迭代器进行内层循环
+//         auto inner_it = it;
+//         while (inner_it != nodes.end()) {
+//             *node += **inner_it;  // 累加值
+//             Node_all.erase(*inner_it);  // 从Node_all中删除
+//             Node_all.insert(node);  // 加入Node_all
+//             All_node.insert(node);  // 加入All_node
+//             if (node->area.values[0] > 500) {
+//                 break;  // 如果面积超过 500，停止
+//             }
+//             ++inner_it;  // 移动到下一个元素
+//         }
+
+//         newnodes.insert(node);
+//         it = inner_it;  // 更新外层迭代器
+//     }
+//     return newnodes;
+// }
 
 void Node::update_hyperedges_less() {
     //清空hyperedges_less

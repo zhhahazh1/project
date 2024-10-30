@@ -269,7 +269,7 @@ void addpoints (HyperGraph &HyperGraph){
 void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &checker){
     
     addpoints (HyperGraph);
-    NodeVector &Nodes =HyperGraph.Node_vector;
+    NodeSet &Nodes =HyperGraph.Node_vector;
     
     GainFpgaMap gainFpgamap;
     for (auto node:Nodes){

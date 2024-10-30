@@ -173,13 +173,22 @@ namespace Initial6{
        
     }
     void con_initial(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker){
-        NodeVector &nodes=HyperGraph.Node_vector;
+        NodeSet &nodes=HyperGraph.Node_vector;
         for(Node* node : nodes){
             if(node->fpga == nullptr){
                 
-                for(auto fpga:node->getneifpga()){
+                for(auto fpga:Fpgas){
+                    FpgaVector neifpgas;
                     if(checker.checkadd(node,fpga,checker)){ 
-                        fpga->add_node(node);
+                        neifpgas.push_back(fpga);
+                    }
+                    if(!neifpgas.empty()){
+                        std::srand(static_cast<unsigned>(std::time(0)));
+                        // 生成一个随机索引
+                        size_t randomIndex = std::rand() % neifpgas.size();
+                        // 选择一个随机的 FPGA
+                        Fpga* selectedFpga = neifpgas[randomIndex];
+                        selectedFpga->add_node(node);
                     }
                 }
 
@@ -187,24 +196,67 @@ namespace Initial6{
         }
     }
     void con_initial2(HyperGraph &HyperGraph, FpgaVector &Fpgas,ConstraintChecker &checker){
-        NodeVector &nodes=HyperGraph.Node_vector;
+        NodeSet &nodes=HyperGraph.Node_vector;
         for(Node* node : nodes){
             if(node->fpga == nullptr){
-                
-                for(auto fpga:node->getneifpga()){
-                    if(checker.checkadd2(node,fpga,checker)){ 
-                        fpga->add_node(node);
-                    }
+                for(auto fpga:Fpgas){
+                        FpgaVector neifpgas;
+                        if(checker.checkadd2(node,fpga,checker)){ 
+                            neifpgas.push_back(fpga);
+                        }
+                        if(!neifpgas.empty()){
+                            std::srand(static_cast<unsigned>(std::time(0)));
+                            // 生成一个随机索引
+                            size_t randomIndex = std::rand() % neifpgas.size();
+                            // 选择一个随机的 FPGA
+                            Fpga* selectedFpga = neifpgas[randomIndex];
+                            selectedFpga->add_node(node);
+                        }
                 }
-                int hasinitial=0;
-                for(auto fpga: Fpgas){
-                    fpga->print();
-                    hasinitial+=fpga->nodes.size();
-                }        
-                std::cout << "hasinitial:" << hasinitial << std::endl;
-
             }
         }
+        
+    }
+    Node* getstartNode(HyperGraph &HyperGraph){
+        for (auto& node : HyperGraph.Node_vector) {
+            node->BFSfound = false;
+            return node;
+        }
+    }
+    int NodeBFS(HyperGraph &HyperGraph,Node* startNode,std::unordered_map<Node*, int>& distance, std::unordered_map<int, std::vector<Node*>>& re_distance,int startdis,int totalNodes,int visitedNodes){
+        std::queue<Node*> q;
+        q.push(startNode);
+        distance[startNode] = startdis;
+        re_distance[startdis].push_back(startNode);
+        //BFS遍历得到每个节点到起始节点的距离
+        visitedNodes = 1;//初始化计数
+        int maxdis=0;
+        while (visitedNodes < totalNodes) {
+            if (q.empty()) {
+                Node* current = getstartNode(HyperGraph);
+                Hyperedge* edge =new Hyperedge((*re_distance[maxdis].begin()),current);
+                q.push(current);
+                maxdis++;
+                distance[current] = maxdis;
+                re_distance[maxdis].push_back(current);
+            }
+            Node* current = q.front();
+            q.pop();
+            for (Node* neighbor : current->getneiNode()) { // 使用 getneinode() 获取相邻节点
+                if (neighbor->BFSfound == false) {
+                    maxdis = distance[current] + 1;
+                    distance[neighbor] = maxdis;
+                    re_distance[maxdis].push_back(neighbor); // 将节点添加到对应距离的列表中
+                    q.push(neighbor);
+                    neighbor->BFSfound = true; // 标记节点已被访问
+                    visitedNodes++; // 增加已访问节点计数
+                    if (visitedNodes >= totalNodes) {
+                        break; // 如果已访问节点数量达到最大节点数量，停止遍历
+                    }
+                }
+            }
+        }
+        return maxdis;
     }
     /**
      * @brief Performs initial partitioning of nodes in a hypergraph across multiple FPGAs.
@@ -231,7 +283,7 @@ namespace Initial6{
         int minSize = totalNodes / numFpgas;
         int extraElements = totalNodes % numFpgas;
         int sqrtNumFpgas = std::sqrt(numFpgas);
-        NodeVector& nodes = HyperGraph.Node_vector;
+        NodeSet& nodes = HyperGraph.Node_vector;
         HyperedgeSet &edges=HyperGraph.Edge_vector;
         //使用std::max_element找到包含节点最多的边
 
@@ -241,32 +293,9 @@ namespace Initial6{
         Node* startNode=(*maxEdge)->src_node.top();
 
         // BFS遍历
-        std::queue<Node*> q;
         std::unordered_map<Node*, int> distance;//节点到起始节点的距离
         std::unordered_map<int, std::vector<Node*>> re_distance;
-        q.push(startNode);
-        distance[startNode] = 0;
-        re_distance[0].push_back(startNode);
-
-        //BFS遍历得到每个节点到起始节点的距离
-        int visitedNodes = 1;//初始化计数
-        int maxdis=0;
-        while (visitedNodes < totalNodes) {
-            Node* current = q.front();
-            q.pop();
-            for (Node* neighbor : current->getneiNode()) { // 使用 getneinode() 获取相邻节点
-                if (distance.find(neighbor) == distance.end()) {
-                    maxdis = distance[current] + 1;
-                    distance[neighbor] = maxdis;
-                    re_distance[maxdis].push_back(neighbor); // 将节点添加到对应距离的列表中
-                    q.push(neighbor);
-                    visitedNodes++; // 增加已访问节点计数
-                    if (visitedNodes >= totalNodes) {
-                        break; // 如果已访问节点数量达到最大节点数量，停止遍历
-                    }
-                }
-            }
-        }
+        int maxdis=NodeBFS(HyperGraph,startNode, distance, re_distance, 0, totalNodes, 0);
         
         //std::cout << "Distance map contains " << distance.size() << " elements." << std::endl;
         auto farthestFpga = Initial6::getcenterFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
@@ -283,14 +312,14 @@ namespace Initial6{
             re_distance[distanceToUse].erase(re_distance[distanceToUse].begin() + randomNumber);
             id++;
         }
-        Initial6::growNodes(Fpgas,checker,engine,1000);
+        Initial6::growNodes(Fpgas,checker,engine,10000);
         int hasinitial=0;
         for(auto fpga: Fpgas){
             fpga->print();
             hasinitial+=fpga->nodes.size();
         }        
         std::cout << "hasinitial:" << hasinitial << std::endl;
-        Initial6::growNodes2(Fpgas,checker,engine,1000);
+        Initial6::growNodes2(Fpgas,checker,engine,10000);
         hasinitial=0;
         for(auto fpga: Fpgas){
             fpga->print();
@@ -298,7 +327,7 @@ namespace Initial6{
         }        
         std::cout << "hasinitial:" << hasinitial << std::endl;
 
-        Initial6::growNodes(Fpgas,checker,engine,5000);
+        Initial6::growNodes(Fpgas,checker,engine,50000);
         hasinitial=0;
         for(auto fpga: Fpgas){
             fpga->print();
@@ -328,7 +357,7 @@ namespace Initial6{
             hasinitial+=fpga->nodes.size();
         }        
         std::cout << "hasinitial:" << hasinitial << std::endl;
-        // con_initial2(HyperGraph,Fpgas,checker);
+        con_initial2(HyperGraph,Fpgas,checker);
     }
 
     std::vector<HyperGraph*> copygraphs(HyperGraph &Graph, int num) {
