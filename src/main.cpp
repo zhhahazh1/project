@@ -33,7 +33,9 @@ int main(int argc, char *argv[]) {
     NodeVector nodes = readNodes(desing_aera);
     HyperedgeSet Hyperedge = readEdges(desing_net, nodes);
     HyperGraph hyperGraph(nodes, Hyperedge);
-    FpgaVector fpgas = readFpgas(desing_info);
+    FpgaVector fpgas = readFpgas(design_info);
+    int hop_max;
+    int switch_node=nodes.size();
     ConstraintChecker checker;
     readtopo(desing_topo, checker, fpgas);
     //buildSparsifiedHypergraph(hyperGraph,10,10000,500);

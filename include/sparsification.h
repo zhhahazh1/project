@@ -274,7 +274,6 @@ void buildSparsifiedHypergraph2(HyperGraph& HyperGraph,size_t hash_num,int level
 }
 
 
-
 //解一层稀疏化
 HyperGraph desparse_Nodes(HyperGraph& _HyperGraph){
   NodeSet nodes = _HyperGraph.Node_vector;
