@@ -350,14 +350,14 @@ namespace Initial6{
         //     hasinitial+=fpga->nodes.size();
         // }        
         // std::cout << "hasinitial:" << hasinitial << std::endl;
-        con_initial2(HyperGraph,Fpgas,checker);
-        hasinitial=0;
-        for(auto fpga: Fpgas){
-            fpga->print();
-            hasinitial+=fpga->nodes.size();
-        }        
-        std::cout << "hasinitial:" << hasinitial << std::endl;
-        con_initial2(HyperGraph,Fpgas,checker);
+        // con_initial2(HyperGraph,Fpgas,checker);
+        // hasinitial=0;
+        // for(auto fpga: Fpgas){
+        //     fpga->print();
+        //     hasinitial+=fpga->nodes.size();
+        // }        
+        // std::cout << "hasinitial:" << hasinitial << std::endl;
+        // con_initial2(HyperGraph,Fpgas,checker);
     }
 
     std::vector<HyperGraph*> copygraphs(HyperGraph &Graph, int num) {

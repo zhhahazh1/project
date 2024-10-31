@@ -125,7 +125,7 @@ public:
         :area(other.area), ID(other.ID){
     }
     Node operator+(Node& other);
-    Node& operator+=(Node& other);
+    void addNode(Node* node);
     //static NodeSet addnodes(NodeSet& nodes);
     void update_hyperedges_less();
     
@@ -569,27 +569,24 @@ Node Node::operator+(Node& other) {
     result.Inclusion_node.insert(&other);
     return result;
 }
-Node& Node::operator+=(Node& other) {
+void Node::addNode(Node* other) {
     //节点面积相加
-    this->area += other.area;
-
-    //两个子节点的超边均连向result节点，使用set避免重复
-    std::set<Hyperedge*> uniqueedge(this->hyperedges.begin(), this->hyperedges.end());
-    uniqueedge.insert(other.hyperedges.begin(), other.hyperedges.end());
-    this->hyperedges = std::move(uniqueedge);  // 将uniqueedge内容转移到result的超边集合中
+    this->area+=other->area;
+    for(auto edge:other->hyperedges){
+        this->hyperedges.insert(edge);
+    }
 
     for (Hyperedge* hyperedge : this->hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
             hyperedge->nodes.insert(this);
-            hyperedge->nodes.erase(&other);
-            if(hyperedge->src_node.top()==&other){
+            hyperedge->nodes.erase(other);
+            if(hyperedge->src_node.top()==other){
                 hyperedge->src_node.push(this);
             }
     }
     this->update_hyperedges_less();
 
     // 当前节点和other节点都要插入到result节点的nodes集合中
-    this->Inclusion_node.insert(&other);
-    return *this;
+    this->Inclusion_node.insert(other);
 }
 // NodeSet Node::addnodes(NodeSet& nodes,NodeSet& Node_all,NodeSet& All_node){
 //     NodeSet newnodes;

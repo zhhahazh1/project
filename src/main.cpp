@@ -18,25 +18,8 @@
 #include<Partitioning.h>
 #include<write.h>
 
-void parseArguments(int argc, char *argv[], std::string &inputDir, std::string &outputFile) {
-    if (argc != 5 || argv[1][0] != '-' || argv[1][1] != 't' || argv[1][2] != '\0' ||
-        argv[3][0] != '-' || argv[3][1] != 's' || argv[3][2] != '\0') {
-        throw std::runtime_error("Usage: ./partitioner -t <input_dir> -s <output_file>");
-    }
-
-    inputDir = argv[2]; // 输入目录
-    outputFile = argv[4]; // 输出文件
-}
 
 int main(int argc, char *argv[]) {
-    std::string inputDir;
-    std::string outputFile;
-    parseArguments(argc, argv, inputDir, outputFile);
-
-    std::cout << "Input Directory: " << inputDir << std::endl;
-    std::cout << "Output File: " << outputFile << std::endl;
-
-
     unsigned int initial_seed = 12345678; // 初始种子
     //unsigned int initial_seed = static_cast<unsigned int>(time(0));
     std::cout << "Seed used: " << initial_seed << std::endl;
@@ -44,6 +27,7 @@ int main(int argc, char *argv[]) {
     std::string desing_net = "../exapmle/case04/design.net";
     std::string desing_info = "../exapmle/case04/design.info";
     std::string desing_topo = "../exapmle/case04/design.topo";
+    std::string outputFile = "output.txt";
     NodeVector nodes = readNodes(desing_aera);
     HyperedgeSet Hyperedge = readEdges(desing_net, nodes);
     HyperGraph hyperGraph(nodes, Hyperedge);
@@ -109,7 +93,7 @@ int main(int argc, char *argv[]) {
     }        
     std::cout << "hasinitial:" << hasinitial << std::endl;
     checker.checkarea(*in_fpgas);
-    writhe(*in_fpgas);
+    writhe(*in_fpgas,outputFile);
     // 等待所有线程执行完毕
     
 

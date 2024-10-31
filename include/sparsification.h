@@ -151,29 +151,29 @@ void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeSet& nodes,Hyper
     int i=0;
     for (auto cluster : clusters) {
       auto it = cluster.begin();
+      NodeVector nodedel;
       while (it != cluster.end()) {
+        if((*it)->area.values[0] > 10000){
+          it++;
+        }
+        else{
           Node* node = new Node();
-
           // 使用一个独立的迭代器进行内层循环
           auto inner_it = it;
           while (inner_it != cluster.end()) {
-            if((*inner_it)->area.values[0] > 2000){
-              ++inner_it;
-              delete node;
-              break;
-            }
-              *node += **inner_it;  // 累加值
+              node->addNode(*inner_it);  // 累加值
               nodes.erase(*inner_it);  // 从Node_all中删除
-              nodes.insert(node);  // 加入Node_all
               HyperGraph.Node_vector_all.push_back(node);  // 加入All_node
-              if (node->area.values[0] > 2000) {
+              if (node->area.values[0] > 10000) {
                 ++inner_it;
                   break;  // 如果面积超过 500，停止
               }
               ++inner_it;  // 移动到下一个元素
           }
+          nodes.insert(node);  // 加入Node_all
 
           it = inner_it;  // 更新外层迭代器
+        }
       }
       i+=cluster.size();
       std::cout <<  i <<  std::endl;
@@ -227,46 +227,7 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level)
 
 }
 
-void buildSparsifiedHypergraph_2(HyperGraph& HyperGraph,size_t hash_num) {//生成稀疏化后的图
-    std::vector<std::vector<HashValue>> hash_vectors;
-    std::vector<HashFunc> hash_functions;
-    size_t Node_Num = HyperGraph._NumNode;
-    NodeVector& nodes = HyperGraph.Node_vector;
-    HyperedgeSet& edges=HyperGraph.Edge_vector;
-    
-    std::vector<std::set<Node*>> clusters;
 
-    size_t _Node_Num = Node_Num;
-    while ((_Node_Num) > (Node_Num / 2)) {//nodes点少于原本一半后停止聚类
-      hash_storage(hash_num, hash_functions);
-      hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
-      clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
-      bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
-      if(hasNonEmptyClusters){
-        int _Node_Num2 = nodes.size();
-        aggregrate_Nodes(clusters, nodes,HyperGraph);
-        _Node_Num = nodes.size();
-        hash_num=_Node_Num2-_Node_Num>100?hash_num:hash_num-1;
-      }
-      else{
-        hash_num=hash_num-1;
-        hash_storage(hash_num, hash_functions);
-      }
-    } 
-    std::queue<Hyperedge*> q;
-    for(auto edge:edges){//去除多余边   
-      if(edge->nodes.size()==1){
-        q.push(edge);
-      }
-    }
-    while (!q.empty()) {
-      auto edge = q.front();
-      q.pop();
-      edges.erase(edge);
-    }
-    HyperGraph.update(nodes,edges);
-
-}
 
 //解一层稀疏化
 HyperGraph desparse_Nodes(HyperGraph& _HyperGraph){
