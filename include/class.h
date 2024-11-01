@@ -124,10 +124,12 @@ public:
     Node(const Node& other)
         :area(other.area), ID(other.ID){
     }
+    Node(size_t id) :  ID(id) {}
     Node operator+(Node& other);
-    void addNode(Node* node);
+    inline void addNode(Node* node);
+    Node* addnodes(NodeSet& nodes,NodeSet& Node_all,NodeSet& All_node);
     //static NodeSet addnodes(NodeSet& nodes);
-    void update_hyperedges_less();
+    inline void update_hyperedges_less();
     
     void addHyperedge(Hyperedge* hyperedge) {
         hyperedges.insert(hyperedge);
@@ -232,6 +234,7 @@ public:
         }
     }
     std::stack<Node*> src_node;
+    std::unordered_map<Fpga*, std::unordered_map<Fpga*, int>> movepoint;
     NodeSet nodes;
     int num_ininodes=0;
     size_t id;
@@ -418,6 +421,7 @@ public:
 
     void add_node(Node* node){
         if(node->fpga!=nullptr){
+            return;
             throw std::invalid_argument("node'fpga is not nullptr");
         }
         this->nodes.insert(node);
@@ -569,13 +573,10 @@ Node Node::operator+(Node& other) {
     result.Inclusion_node.insert(&other);
     return result;
 }
-void Node::addNode(Node* other) {
+inline void Node::addNode(Node* other) {
     //节点面积相加
     this->area+=other->area;
-    for(auto edge:other->hyperedges){
-        this->hyperedges.insert(edge);
-    }
-
+    this->hyperedges.insert(other->hyperedges.begin(), other->hyperedges.end());
     for (Hyperedge* hyperedge : this->hyperedges) { // 遍历result的所有超边，并从每个超边的节点集合中删除this和other,加入result
             hyperedge->nodes.insert(this);
             hyperedge->nodes.erase(other);
@@ -583,38 +584,31 @@ void Node::addNode(Node* other) {
                 hyperedge->src_node.push(this);
             }
     }
-    this->update_hyperedges_less();
 
     // 当前节点和other节点都要插入到result节点的nodes集合中
     this->Inclusion_node.insert(other);
 }
-// NodeSet Node::addnodes(NodeSet& nodes,NodeSet& Node_all,NodeSet& All_node){
-//     NodeSet newnodes;
-    
-//     auto it = nodes.begin();
-//     while (it != nodes.end()) {
-//         Node* node = new Node();
+Node* Node::addnodes(NodeSet& nodes,NodeSet& Node_all,NodeSet& All_node){
+    Node* newnode=new Node();
+    for(auto node:nodes){
+        for(auto edge:node->hyperedges){
+            newnode->hyperedges.insert(edge);
+            edge->nodes.insert(newnode);
+            edge->nodes.erase(node);
+            if(edge->src_node.top()==node){
+                edge->src_node.push(newnode);
+            }
+        }
+        newnode->Inclusion_node.insert(node);
+        newnode->area+=node->area;
+        Node_all.erase(node);
+    }
+    Node_all.insert(newnode);
+    All_node.insert(newnode);
+    return newnode;
+}
 
-//         // 使用一个独立的迭代器进行内层循环
-//         auto inner_it = it;
-//         while (inner_it != nodes.end()) {
-//             *node += **inner_it;  // 累加值
-//             Node_all.erase(*inner_it);  // 从Node_all中删除
-//             Node_all.insert(node);  // 加入Node_all
-//             All_node.insert(node);  // 加入All_node
-//             if (node->area.values[0] > 500) {
-//                 break;  // 如果面积超过 500，停止
-//             }
-//             ++inner_it;  // 移动到下一个元素
-//         }
-
-//         newnodes.insert(node);
-//         it = inner_it;  // 更新外层迭代器
-//     }
-//     return newnodes;
-// }
-
-void Node::update_hyperedges_less() {
+inline  void Node::update_hyperedges_less() {
     //清空hyperedges_less
     this->hyperedges_less.clear();
     //重新添加

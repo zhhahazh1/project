@@ -31,6 +31,15 @@ namespace Initial6{
 
         return (farthestFpga != Fpgas.end()) ? *farthestFpga : nullptr;
     }
+    Fpga* getFarthestFpga(const FpgaVector& Fpgas) {
+        auto farthestFpga = std::max_element(Fpgas.begin(), Fpgas.end(), [](const Fpga* a, const Fpga* b) {
+            int sumA = std::accumulate(a->distance_neifpga.begin(), a->distance_neifpga.end(), 0);
+            int sumB = std::accumulate(b->distance_neifpga.begin(), b->distance_neifpga.end(), 0);
+            return sumA > sumB; // 修改为小于号以找到最大值
+        });
+
+        return *farthestFpga; // 返回最大距离的FPGA
+    }
 
     // 将整数向量缩放到最大值
     void scaleIntegersToMax(std::vector<int>& numbers, int targetMax) {
@@ -287,10 +296,11 @@ namespace Initial6{
         HyperedgeSet &edges=HyperGraph.Edge_vector;
         //使用std::max_element找到包含节点最多的边
 
-        auto maxEdge = std::max_element(edges.begin(), edges.end(), [](Hyperedge* a, Hyperedge* b) {
-            return a->nodes.size() > b->nodes.size();
+        
+        auto minEdge = std::min_element(edges.begin(), edges.end(), [](Hyperedge* a, Hyperedge* b) {
+            return a->nodes.size() < b->nodes.size(); // 比较节点数，寻找最小值
         });
-        Node* startNode=(*maxEdge)->src_node.top();
+        Node* startNode=(*minEdge)->src_node.top();
 
         // BFS遍历
         std::unordered_map<Node*, int> distance;//节点到起始节点的距离
@@ -298,7 +308,8 @@ namespace Initial6{
         int maxdis=NodeBFS(HyperGraph,startNode, distance, re_distance, 0, totalNodes, 0);
         
         //std::cout << "Distance map contains " << distance.size() << " elements." << std::endl;
-        auto farthestFpga = Initial6::getcenterFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
+        auto farthestFpga = Initial6::getFarthestFpga(Fpgas);//获得总距离最远的fpga作为初始fpga
+        
         std::vector<int> fpgadis=farthestFpga->distance_neifpga;
         scaleIntegersToMax(fpgadis, maxdis);//将fpga的距离缩放到最大值
         int id = 0;
@@ -312,6 +323,13 @@ namespace Initial6{
             re_distance[distanceToUse].erase(re_distance[distanceToUse].begin() + randomNumber);
             id++;
         }
+        
+        auto maxEdge = std::max_element(edges.begin(), edges.end(), [](Hyperedge* a, Hyperedge* b) {
+            return a->nodes.size() > b->nodes.size();
+        });
+        auto centerFpga = Initial6::getcenterFpga(Fpgas);
+        centerFpga->add_node((*maxEdge)->src_node.top());
+
         Initial6::growNodes(Fpgas,checker,engine,10000);
         int hasinitial=0;
         for(auto fpga: Fpgas){
@@ -350,13 +368,13 @@ namespace Initial6{
         //     hasinitial+=fpga->nodes.size();
         // }        
         // std::cout << "hasinitial:" << hasinitial << std::endl;
-        // con_initial2(HyperGraph,Fpgas,checker);
-        // hasinitial=0;
-        // for(auto fpga: Fpgas){
-        //     fpga->print();
-        //     hasinitial+=fpga->nodes.size();
-        // }        
-        // std::cout << "hasinitial:" << hasinitial << std::endl;
+        con_initial2(HyperGraph,Fpgas,checker);
+        hasinitial=0;
+        for(auto fpga: Fpgas){
+            fpga->print();
+            hasinitial+=fpga->nodes.size();
+        }        
+        std::cout << "hasinitial:" << hasinitial << std::endl;
         // con_initial2(HyperGraph,Fpgas,checker);
     }
 

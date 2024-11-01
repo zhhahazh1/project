@@ -18,15 +18,17 @@
 #include<Partitioning.h>
 #include<write.h>
 
-
+int hasinitial=0;
 int main(int argc, char *argv[]) {
     unsigned int initial_seed = 12345678; // 初始种子
     //unsigned int initial_seed = static_cast<unsigned int>(time(0));
     std::cout << "Seed used: " << initial_seed << std::endl;
-    std::string desing_aera = "../exapmle/case04/design.are";
-    std::string desing_net = "../exapmle/case04/design.net";
-    std::string desing_info = "../exapmle/case04/design.info";
-    std::string desing_topo = "../exapmle/case04/design.topo";
+    std::string desing_aera = "../exapmle/case03/design.are";
+    std::string desing_net = "../exapmle/case03/design.net";
+    std::string desing_info = "../exapmle/case03/design.info";
+    std::string desing_topo = "../exapmle/case03/design.topo";
+    std::string outputFile1 = "design.are";
+    std::string outputFile2 = "design.net";
     std::string outputFile = "output.txt";
     NodeVector nodes = readNodes(desing_aera);
     HyperedgeSet Hyperedge = readEdges(desing_net, nodes);
@@ -34,9 +36,11 @@ int main(int argc, char *argv[]) {
     FpgaVector fpgas = readFpgas(desing_info);
     ConstraintChecker checker;
     readtopo(desing_topo, checker, fpgas);
-    buildSparsifiedHypergraph(hyperGraph,10,10000);
-    buildSparsifiedHypergraph(hyperGraph,10,1000);
-    buildSparsifiedHypergraph(hyperGraph,10,100);
+    //buildSparsifiedHypergraph(hyperGraph,10,10000,500);
+    // buildSparsifiedHypergraph(hyperGraph,10,1000,10000);
+    // buildSparsifiedHypergraph(hyperGraph,10,100,10000);
+    // write2(hyperGraph,outputFile1,outputFile2);
+    //buildSparsifiedHypergraph2(hyperGraph,10,100,2147483647);
     //Initial6::PartitionResult result =Initial6::multinitial(hyperGraph, fpgas, checker, initial_seed, 1);
     Initial6::InitialPartitioning(hyperGraph, fpgas,checker,1055721139);
     HyperGraph* in_hyperGraph = &hyperGraph;
@@ -59,18 +63,7 @@ int main(int argc, char *argv[]) {
     checker.checkarea(*in_fpgas);
 
     desparseHypergraph(*in_hyperGraph);
-    in_hyperGraph->update_edge_fpgacont();
-    in_hyperGraph->remove();
-    Partitioning(*in_hyperGraph,*in_fpgas,checker);
-    hasinitial=0;
-    for(auto fpga: *in_fpgas){
-        fpga->print();
-        hasinitial+=fpga->nodes.size();
-    }        
-    std::cout << "hasinitial:" << hasinitial << std::endl;
-    checker.checkarea(*in_fpgas);
-
-    desparseHypergraph(*in_hyperGraph);
+    checker.checkgrapy(*in_hyperGraph);
     in_hyperGraph->update_edge_fpgacont();
     in_hyperGraph->remove();
     Partitioning(*in_hyperGraph,*in_fpgas,checker);
