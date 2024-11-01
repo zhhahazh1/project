@@ -1,32 +1,35 @@
 
-bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
+inline bool checkcon(Node* node,Fpga* tarfpga,ConstraintChecker &checker){
     HyperedgeSet neiedges = node->hyperedges_less;
     Fpga* nor_fpga=node->fpga;//移动前位置
-    
+    if(node->movenable==false){
+        return false;
+    }
         //面积约束检查
     if (tarfpga->usearea+node->area>tarfpga->area){
         return false;
     }
-    //检查目标fpga的cop
-    int tarfpga_nowcop=tarfpga->nowcoppoints;
-    for (auto edge:neiedges){
-        FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
-        fpgacount[tarfpga]+=1;
-        fpgacount[nor_fpga]-=1;
-        if(fpgacount[nor_fpga]==0){
-            fpgacount.erase(nor_fpga);
-        }
-        if(fpgacount[tarfpga]==1){
-            tarfpga_nowcop+=edge->weight;
-        }
-        if(fpgacount.size()==1){
-            tarfpga_nowcop-=edge->weight;
-        }
-    }
-    if (tarfpga_nowcop>tarfpga->maxcoppoints){
-            return false;
-    }
-    
+    // //检查目标fpga的cop
+    // int tarfpga_nowcop=tarfpga->nowcoppoints;
+    // int nor_tarfpga_nowcop=tarfpga->nowcoppoints;
+    // for (auto edge:neiedges){
+    //     FpgaMap fpgacount=edge->fpgaCount;//复制一份fpgacount
+    //     fpgacount[tarfpga]+=1;
+    //     fpgacount[nor_fpga]-=1;
+    //     if(fpgacount[nor_fpga]==0){
+    //         fpgacount.erase(nor_fpga);
+    //     }
+    //     if(fpgacount[tarfpga]==1){
+    //         tarfpga_nowcop+=edge->weight;
+    //     }
+    //     if(fpgacount.size()==1){
+    //         tarfpga_nowcop-=edge->weight;
+    //     }
+    // }
+    // if (tarfpga_nowcop>tarfpga->maxcoppoints&&tarfpga_nowcop-nor_tarfpga_nowcop>0){
+    //         return false;
+    // }
+
     //边约束检查
     for (auto edge:neiedges){
         if(node==edge->src_node.top()){

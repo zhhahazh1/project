@@ -66,7 +66,7 @@ void BFS(int startVertex,std::vector<int>* adjList,FpgaVector fpgas) {
     }
 */
 // 读取节点文件
-NodeVector readNodes(const std::string filename) {
+NodeVector readNodes(const std::string filename,std::unordered_map<size_t, Node*> &node_map) {
     std::ifstream infile(filename);
     std::string line;
     NodeVector nodes;
@@ -85,12 +85,13 @@ NodeVector readNodes(const std::string filename) {
         }
         Node* node = new Node(area,id); 
         nodes.push_back(node);
+        node_map[id] = node;
     }
     return nodes;
 }
 
 // 读取超边文件
-HyperedgeSet readEdges(const std::string filename, NodeVector& NodeVector) {
+HyperedgeSet readEdges(const std::string filename, std::unordered_map<size_t, Node*>& NodeVector) {
     std::ifstream infile(filename);
     std::string line;
     HyperedgeSet Hyperedges;
