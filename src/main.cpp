@@ -34,9 +34,7 @@ int main(int argc, char *argv[]) {
     NodeVector nodes = readNodes(desing_aera,node_map);
     HyperedgeSet Hyperedge = readEdges(desing_net, node_map);
     HyperGraph hyperGraph(nodes, Hyperedge);
-    FpgaVector fpgas = readFpgas(design_info);
-    int hop_max;
-    int switch_node=nodes.size();
+    FpgaVector fpgas = readFpgas(desing_info);
     ConstraintChecker checker;
     readtopo(desing_topo, checker, fpgas);
     checker.checkgrapy(hyperGraph);

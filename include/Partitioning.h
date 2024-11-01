@@ -336,7 +336,7 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
         }
     }
     int maxgain=gainFpgamap.rbegin()->first;
-    while(maxgain>10){
+    while(maxgain>0){
         bool hasmove=false;
         int i=0;
         while (maxgain>0){        
