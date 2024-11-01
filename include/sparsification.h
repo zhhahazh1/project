@@ -180,6 +180,8 @@ void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeSet& nodes,Hyper
       }
       
     }
+    HyperGraph.update(nodes,edges);
+
 }
 
 void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level,int area) {//生成稀疏化后的图
@@ -193,6 +195,50 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level,
 
     size_t _Node_Num = Node_Num;
     while ((_Node_Num) > (Node_Num / 8)) {//nodes点少于原本一半后停止聚类
+      hash_storage(hash_num, hash_functions);
+      hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
+      clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
+      bool hasNonEmptyClusters = std::any_of(clusters.begin(), clusters.end(), [](const std::set<Node*>& s){ return !s.empty(); });//clusters不为空时true,可改进
+      if(hasNonEmptyClusters){
+        int _Node_Num2 = nodes.size();
+        aggregrate_Nodes(clusters, nodes,HyperGraph,area);
+        _Node_Num = nodes.size();
+        hash_num=_Node_Num2-_Node_Num>level?hash_num:hash_num-1;
+        if(hash_num<1){
+          hash_num=1;
+        }
+      }
+      else{
+        hash_num=hash_num-1;
+        hash_num=hash_num<1?1:hash_num;
+      }
+    } 
+    std::queue<Hyperedge*> q;
+    for(auto edge:edges){//去除多余边   
+      if(edge->nodes.size()==1){
+        q.push(edge);
+      }
+    }
+    while (!q.empty()) {
+      auto edge = q.front();
+      q.pop();
+      edges.erase(edge);
+    }
+    HyperGraph.update(nodes,edges);
+
+}
+
+void buildSparsifiedHypergraph_2(HyperGraph& HyperGraph,size_t hash_num,int level) {//生成稀疏化后的图
+    std::vector<std::vector<std::pair<Node*, HashValue>>> hash_vectors;
+    std::vector<HashFunc> hash_functions;
+    size_t Node_Num = HyperGraph._NumNode;
+    NodeSet& nodes = HyperGraph.Node_vector;
+    HyperedgeSet& edges=HyperGraph.Edge_vector;
+    
+    std::vector<std::set<Node*>> clusters;
+
+    size_t _Node_Num = Node_Num;
+    while ((_Node_Num) > (Node_Num / 2)) {//nodes点少于原本一半后停止聚类
       hash_storage(hash_num, hash_functions);
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
