@@ -420,6 +420,16 @@ void desparseNodes(NodeSet& nodes){
   }
 }
 
+bool area_judge(NodeSet& nodes,int area){//判断nodes里的点是否都超过面积限制
+  bool area_judge=true;
+  for(auto node:nodes){
+    if(node->area.values[0] < area){
+      area_judge=false;
+      break;
+    }
+  }
+  return area_judge;
+}
 //强制聚合顶点
 void aggregrate_Nodes_force(HyperGraph& HyperGraph,int area,int node_limit){
   NodeSet& nodes_ori = HyperGraph.Node_vector;
