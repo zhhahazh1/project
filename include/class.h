@@ -511,6 +511,9 @@ NodeSet Node::getneiNode(){
     NodeSet neiNodes;
     HyperedgeSet neiedges=this->hyperedges_less;
     for (auto* hyperedge : neiedges) {
+        if(hyperedge->nodes.find(this)==hyperedge->nodes.end()){
+            int a=0;
+        }
         for (auto* node : hyperedge->nodes) {
             if (node != this) {
                 neiNodes.insert(node);

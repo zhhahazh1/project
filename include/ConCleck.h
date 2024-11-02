@@ -32,6 +32,9 @@ public:
                 if(hypergraph.Edge_vector.find(edge)==hypergraph.Edge_vector.end()){
                     return false;
                 }
+                if(edge->nodes.find(node)==edge->nodes.end()){
+                    return false;
+                }
             }
         }
         for(auto edge:hypergraph.Edge_vector){

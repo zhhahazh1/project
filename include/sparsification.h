@@ -166,13 +166,13 @@ void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeSet& nodes,Hyper
               i++;
               std::cout <<  i <<  std::endl;
               nodes.erase(*inner_it);  // 从Node_all中删除
-              HyperGraph.Node_vector_all.push_back(node);  // 加入All_node
               if (node->area.values[0] > area) {
                 ++inner_it;
                   break;  // 如果面积超过 500，停止
               }
               ++inner_it;  // 移动到下一个元素
           }
+          HyperGraph.Node_vector_all.push_back(node);  // 加入All_node
           nodes.insert(node);  // 加入Node_all
           node->update_hyperedges_less();
           it = inner_it;  // 更新外层迭代器
@@ -184,7 +184,7 @@ void aggregrate_Nodes(std::vector<std::set<Node*>> clusters,NodeSet& nodes,Hyper
 
 
 
-void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level,int area) {//生成稀疏化后的图
+void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int n,int level,int area) {//生成稀疏化后的图
     std::vector<std::vector<std::pair<Node*, HashValue>>> hash_vectors;
     std::vector<HashFunc> hash_functions;
     size_t Node_Num = HyperGraph._NumNode;
@@ -194,7 +194,7 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level,
     std::vector<std::set<Node*>> clusters;
 
     size_t _Node_Num = Node_Num;
-    while ((_Node_Num) > (Node_Num / 8)) {//nodes点少于原本一半后停止聚类
+    while ((_Node_Num) > (Node_Num / n)) {//nodes点少于原本一半后停止聚类
       hash_storage(hash_num, hash_functions);
       hash_vectors_calculate(nodes,_Node_Num,hash_num,hash_vectors,hash_functions);
       clusters=search_identical_columns(nodes,_Node_Num,hash_num,hash_vectors);
@@ -205,7 +205,7 @@ void buildSparsifiedHypergraph(HyperGraph& HyperGraph,size_t hash_num,int level,
         _Node_Num = nodes.size();
         hash_num=_Node_Num2-_Node_Num>level?hash_num:hash_num-1;
         if(hash_num<1){
-          if(_Node_Num-Node_Num / 8>(_Node_Num2-_Node_Num)*10){
+          if(_Node_Num-Node_Num / n>(_Node_Num2-_Node_Num)*10){
             break;
           }
           hash_num=1;
@@ -423,75 +423,213 @@ void desparseNodes(NodeSet& nodes){
 //强制聚合顶点
 void aggregrate_Nodes_force(HyperGraph& HyperGraph,int area,int node_limit){
   NodeSet& nodes_ori = HyperGraph.Node_vector;
-  NodeSet nodes=nodes_ori;
   HyperedgeSet& edges=HyperGraph.Edge_vector;
   ConstraintChecker checker;
-  int nodes_num=nodes.size();
+  int nodes_num=nodes_ori.size();
+  int i=0;
   while(nodes_num > node_limit){
-    auto node=nodes.begin();
-    if((*node)->area.values[0] > area){
+    auto node=nodes_ori.begin();
+    while((*node)->area.values[0] > area){
       node++;
     }
-    int id=nodes_ori.size();
-    Node* node_new = new Node(id);
-    node_new->addNode(*node);
-    for(auto node_nei:(*node)->getneiNode()){
-      if(node_nei->area.values[0] < area){
-        node_new->addNode(node_nei);
-        nodes_ori.erase(node_nei);
-        nodes_num=nodes_ori.size();
-      }
-      if(node_new->area.values[0] > area){
-        break;
-      }
-    }
-    nodes_ori.erase(node);
-    nodes_ori.insert(node_new);
-    nodes=nodes_ori;
-    nodes_num=nodes.size();
-  }
+      int id=nodes_ori.size();
+      Node* node_new = new Node(id);
 
-/*
-  {  
-    
-    for(auto node : nodes){
-      if(nodes_num <= node_limit){
-        break;
-      }
-      else{
-        for(auto node_del:node->getneiNode()){
-          if(node->area.values[0] < area){
-            int id=HyperGraph.Node_vector_all.size();
-            Node* node_new = new Node(id);
-            node_new->addNode(node_del);
-            node_new->addNode(node);
-            nodes_ori.erase(node_del);
-            nodes_ori.erase(node);
-            nodes.erase(node_del);
-            nodes_ori.insert(node_new);
-            std::queue<Hyperedge*> q;
-            for(auto edge:edges){//去除多余边   
-              if(edge->nodes.size()==1){
-                q.push(edge);
-              }
-            }
-            while (!q.empty()) {
-              auto edge = q.front();
-              q.pop();
-              edges.erase(edge);
-            }
-            HyperGraph.update(nodes_ori,edges);
-            node_new->update_hyperedges_less();
-            break;
-          }
+      auto node_neis=(*node)->getneiNode();
+      node_new->addNode(*node);
+      i++;
+      std::cout <<  i <<  std::endl;
+      nodes_ori.erase(node);
+      for(auto node_nei:node_neis){
+        if(node_nei->area.values[0] < area){
+          node_new->addNode(node_nei);
+          i++;
+          std::cout <<  i <<  std::endl;
+          nodes_ori.erase(node_nei);
+          nodes_num=nodes_ori.size();
+        }
+        if(node_new->area.values[0] > area){
+          break;
         }
       }
+      node_new->update_hyperedges_less();
+      nodes_ori.insert(node_new);
+      HyperGraph.Node_vector_all.push_back(node_new);
       nodes_num=nodes_ori.size();
+  }
+  std::queue<Hyperedge*> q;
+  for(auto edge:edges){//去除多余边   
+    if(edge->nodes.size()==1){
+      q.push(edge);
     }
-    checker.checkgrapy(HyperGraph);
-    nodes=nodes_ori;
-  }*/
+  }
+  while (!q.empty()) {
+    auto edge = q.front();
+    q.pop();
+    edges.erase(edge);
+  }
+  HyperGraph._NumNode=nodes_ori.size();
+  HyperGraph._NumEdge=edges.size();
 }
+
+
+bool aggregrate_Nodes2(std::vector<std::set<Node*>> clusters,HyperGraph& HyperGraph,int area){
+    NodeSet& nodes = HyperGraph.Node_vector;
+    int i=0;
+    for (auto cluster : clusters) {
+      auto it = cluster.begin();
+      NodeVector nodedel;
+      while (it != cluster.end()) {
+        auto it2 = std::next(it); // 获取下一个迭代器
+        if((*it)->area.values[0] > area){
+          it++;          
+        }
+        else{
+          if(it2==cluster.end()){
+            break;
+          }
+          int id=HyperGraph.Node_vector_all.size();
+          Node* node = new Node(id);
+          // 使用一个独立的迭代器进行内层循环
+          auto inner_it = it;
+          while (inner_it != cluster.end()) {
+              node->addNode(*inner_it);  // 累加值
+              i++;
+              std::cout <<  i <<  std::endl;
+              nodes.erase(*inner_it);  // 从Node_all中删除
+              if (node->area.values[0] > area) {
+                ++inner_it;
+                  break;  // 如果面积超过 500，停止
+              }
+              ++inner_it;  // 移动到下一个元素
+          }
+          HyperGraph.Node_vector_all.push_back(node);  // 加入All_node
+          nodes.insert(node);  // 加入Node_all
+          node->update_hyperedges_less();
+          NodeSet a=node->getneiNode();
+          it = inner_it;  // 更新外层迭代器
+        }
+      } 
+    }
+    if(i==0){
+      return false;
+    }
+    std::queue<Hyperedge*> q;
+    for(auto edge:HyperGraph.Edge_vector){//去除多余边   
+      if(edge->nodes.size()==1){
+        q.push(edge);
+      }
+    }
+    while (!q.empty()) {
+      auto edge = q.front();
+      q.pop();
+      HyperGraph.Edge_vector.erase(edge);
+    }
+    HyperGraph._NumNode=nodes.size();
+    HyperGraph._NumEdge=HyperGraph.Edge_vector.size();
+    return true;
+    
+}
+void aggregrate_Nodes_force2(HyperGraph& HyperGraph,int area,int node_limit){
+  while(HyperGraph._NumNode > node_limit){
+      std::vector<NodeSet> clusters;
+      auto it=HyperGraph.Edge_vector.begin();
+      clusters.push_back((*it)->nodes);
+      while(true){
+        bool a=aggregrate_Nodes2(clusters,HyperGraph,area);
+        if(a==true){
+          break;
+        }
+        clusters.clear();
+        it++;
+        clusters.push_back((*it)->nodes);
+      }
+  }
+}
+
+
+void aggregrate_Nodes3(std::vector<std::vector<Node*>> clusters,HyperGraph& HyperGraph,int area){
+    NodeSet& nodes = HyperGraph.Node_vector;
+    int i=0;
+    for (auto cluster : clusters) {
+      auto it = cluster.begin();
+      NodeVector nodedel;
+      while (it != cluster.end()) {
+        if((*it)->area.values[0] > area){
+          it++;          
+        }
+        else{
+          int id=HyperGraph.Node_vector_all.size();
+          Node* node = new Node(id);
+          // 使用一个独立的迭代器进行内层循环
+          auto inner_it = it;
+          while (inner_it != cluster.end()) {
+              node->addNode(*inner_it);  // 累加值
+              i++;
+              std::cout <<  i <<  std::endl;
+              nodes.erase(*inner_it);  // 从Node_all中删除
+              if (node->area.values[0] > area) {
+                ++inner_it;
+                  break;  // 如果面积超过 500，停止
+              }
+              ++inner_it;  // 移动到下一个元素
+          }
+          HyperGraph.Node_vector_all.push_back(node);  // 加入All_node
+          nodes.insert(node);  // 加入Node_all
+          node->update_hyperedges_less();
+          NodeSet a=node->getneiNode();
+          it = inner_it;  // 更新外层迭代器
+        }
+      } 
+    }
+    std::queue<Hyperedge*> q;
+    for(auto edge:HyperGraph.Edge_vector){//去除多余边   
+      if(edge->nodes.size()==1){
+        q.push(edge);
+      }
+    }
+    while (!q.empty()) {
+      auto edge = q.front();
+      q.pop();
+      HyperGraph.Edge_vector.erase(edge);
+    }
+    HyperGraph._NumNode=nodes.size();
+    HyperGraph._NumEdge=HyperGraph.Edge_vector.size();
+    
+}
+void aggregrate_Nodes_force3(HyperGraph& HyperGraph,int area,int node_limit){
+  while(HyperGraph._NumNode > node_limit){
+    std::vector<NodeVector> clusters;
+    NodeVector cluster;
+    auto startnode=HyperGraph.Node_vector.begin();
+    while((*startnode)->area.values[0] > area){
+      startnode++;
+    }
+    cluster.push_back(*startnode);
+    for(auto node:(*startnode)->getneiNode()){
+      cluster.push_back(node);
+    }
+    clusters.push_back(cluster);
+    aggregrate_Nodes3(clusters,HyperGraph,area);
+  }
+}
+
+void aggregrate_Nodes_force4(HyperGraph& HyperGraph,int area){
+    std::vector<NodeSet> clusters;
+    NodeSet cluster;
+    NodeSet& nodes = HyperGraph.Node_vector;
+    auto maxnode = std::max_element(nodes.begin(), nodes.end(), [](Node* a, Node* b) {
+          return a->hyperedges.size() < b->hyperedges.size(); // 比较节点数
+    });
+    
+    auto startnode=maxnode;
+    for(auto node:(*startnode)->getneiNode()){
+      cluster.insert(node);
+    }
+    clusters.push_back(cluster);
+    aggregrate_Nodes2(clusters,HyperGraph,area);
+}
+
 
 
 

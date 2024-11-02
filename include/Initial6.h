@@ -298,8 +298,13 @@ namespace Initial6{
 
         
         auto minEdge = std::min_element(edges.begin(), edges.end(), [](Hyperedge* a, Hyperedge* b) {
-            return a->nodes.size() < b->nodes.size(); // 比较节点数，寻找最小值
+            if (a->nodes.size() != b->nodes.size()) {
+                return a->nodes.size() < b->nodes.size(); // 比较节点数
+            }
+            // 如果节点数相等，按另一个属性比较（假设有一个 weight 属性）
+            return a->src_node.top()->hyperedges_less.size() < b->src_node.top()->hyperedges_less.size(); // 比较节点的超边数
         });
+        auto a=*minEdge;
         Node* startNode=(*minEdge)->src_node.top();
 
         // BFS遍历
@@ -329,6 +334,11 @@ namespace Initial6{
         });
         auto centerFpga = Initial6::getcenterFpga(Fpgas);
         centerFpga->add_node((*maxEdge)->src_node.top());
+
+        auto maxnode = std::max_element(nodes.begin(), nodes.end(), [](Node* a, Node* b) {
+            return a->hyperedges.size() > b->hyperedges.size();
+        });
+        centerFpga->add_node(*maxnode);
 
         Initial6::growNodes(Fpgas,checker,engine,10000);
         int hasinitial=0;
