@@ -341,12 +341,12 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
         int i=0;
         while (maxgain>0){        
             for(auto movenode:gainFpgamap[maxgain]){
-                i++;
+                
                 if(checkcon(movenode.first,movenode.second,checker)){
                     std::cout<<i<<std::endl;
                     i=0;
                     Move(movenode,gainFpgamap,checker,fpgas);
-
+                    i++;
                     hasmove=true;
                     break;
                 }
@@ -354,6 +354,9 @@ void Partitioning(HyperGraph &HyperGraph,FpgaVector& fpgas,ConstraintChecker &ch
             if(hasmove){
                 maxgain=gainFpgamap.rbegin()->first;
                 break; 
+            }
+            if(i>50){
+                break;
             }
             maxgain--;
         }
